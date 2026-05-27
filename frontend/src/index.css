@@ -1,0 +1,97 @@
+/* ── Google Fonts (must be first) ────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base Reset ────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #0a0a14;
+  color: #e2e2f0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar styling ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0f0f1e; }
+::-webkit-scrollbar-thumb { background: #2e2e48; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+
+/* ── React Flow canvas override ────────────────────────────────── */
+.react-flow__renderer { background: transparent !important; }
+.react-flow__background { opacity: 0.4; }
+.react-flow__attribution { display: none; }
+
+/* ── Animated edge glow ────────────────────────────────────────── */
+.react-flow__edge-path {
+  stroke-width: 2 !important;
+}
+.edge-active .react-flow__edge-path {
+  stroke: #6366f1 !important;
+  filter: drop-shadow(0 0 4px #6366f1);
+  animation: edge-flow 1.5s linear infinite;
+}
+@keyframes edge-flow {
+  0%   { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* ── Agent node glow states ────────────────────────────────────── */
+.node-active {
+  animation: node-pulse 1.8s ease-in-out infinite;
+}
+@keyframes node-pulse {
+  0%, 100% { box-shadow: 0 0 8px #6366f1, 0 0 16px #6366f180; }
+  50%       { box-shadow: 0 0 20px #6366f1, 0 0 40px #6366f1, 0 0 60px #6366f180; }
+}
+
+/* ── Glass panel ───────────────────────────────────────────────── */
+.glass {
+  background: rgba(15, 15, 30, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+/* ── Log entry slide-in ────────────────────────────────────────── */
+.log-entry {
+  animation: slideIn 0.25s ease-out;
+}
+@keyframes slideIn {
+  from { transform: translateY(6px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+/* ── Progress bar shimmer ──────────────────────────────────────── */
+.progress-shimmer {
+  background: linear-gradient(
+    90deg,
+    #6366f1 0%,
+    #818cf8 40%,
+    #6366f1 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Status badge pulse ────────────────────────────────────────── */
+.status-dot-active {
+  animation: dot-pulse 1.2s ease-in-out infinite;
+}
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.8); }
+}

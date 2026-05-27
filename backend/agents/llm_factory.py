@@ -1,0 +1,192 @@
+"""
+llm_factory.py — NexusSwarm LLM Provider
+All model IDs LIVE-TESTED against build.nvidia.com (May 2026)
+
+Provider: NVIDIA NIM (free tier, OpenAI-compatible)
+Only models that returned HTTP 200 for this account are used.
+"""
+
+import os
+import logging
+from pathlib import Path
+from typing import Optional
+from openai import AsyncOpenAI
+
+# Load .env from the backend directory automatically
+_env_path = Path(__file__).parent.parent / ".env"
+if _env_path.exists():
+    from dotenv import load_dotenv
+    load_dotenv(_env_path, override=False)
+
+logger = logging.getLogger(__name__)
+
+# ─────────────────────────────────────────────────────────────
+#  VERIFIED MODEL IDs  (live-tested — only these returned 200)
+# ─────────────────────────────────────────────────────────────
+
+# Reasoning / Orchestration  (70B, strong reasoning)
+LLAMA_70B      = "meta/llama-3.3-70b-instruct"          # HeadOrchestrator, SecurityManager
+
+# Fast / Agentic  (DeepSeek V4 Flash — confirmed OK)
+DEEPSEEK_FLASH = "deepseek-ai/deepseek-v4-flash"        # Managers, Diagnostics, Reliability
+
+# Code Generation  (480B MoE coder — confirmed OK)
+QWEN_CODER     = "qwen/qwen3-coder-480b-a35b-instruct"  # All coding agents
+
+# General Purpose  (Llama 4 Maverick — confirmed OK)
+LLAMA4         = "meta/llama-4-maverick-17b-128e-instruct"  # Memory, Validators, Planning
+
+# Lightweight  (8B, fast for simple tasks)
+LLAMA_8B       = "meta/llama-3.1-8b-instruct"           # RetryCoordinator, ContractValidator
+
+
+# ─────────────────────────────────────────────────────────────
+#  AGENT → MODEL ASSIGNMENTS  (all using verified model IDs)
+# ─────────────────────────────────────────────────────────────
+
+AGENT_MODEL_MAP: dict[str, str] = {
+    # Level 1 — Executive
+    "HeadOrchestrator":         LLAMA_70B,        # Strong reasoning for orchestration
+
+    # Level 2 — Pipeline Managers
+    "PlanningManager":          LLAMA_8B,         # Coordination can use fast model
+    "EngineeringManager":       LLAMA_8B,
+    "QAManager":                LLAMA_8B,
+    "SecurityManager":          LLAMA_70B,        # Security needs strong reasoning
+    "DevOpsManager":            LLAMA_8B,
+    "ReliabilityManager":       LLAMA_8B,
+
+    # Level 3 — Planning Workers
+    "RequirementAgent":         LLAMA_8B,         # General planning
+    "RiskAnalyzer":             LLAMA_8B,         # General analysis
+
+    # Level 3 — Engineering Workers
+    "BackendAgent":             LLAMA_70B,        # Code generation needs 70B
+    "APIAgent":                 LLAMA_70B,        # API specs need 70B
+    "FrontendAgent":            LLAMA_70B,        # UI generation needs 70B
+
+    # Level 3 — QA Workers
+    "TestAgent":                LLAMA_70B,        # Test code needs 70B
+    "ReviewerAgent":            LLAMA_8B,         # Code review
+    "RuntimeExecutionAgent":    LLAMA_8B,         # Runtime analysis
+
+    # Level 3 — Security Workers
+    "ScannerAgent":             LLAMA_70B,        # Security audit needs strongest model
+
+    # Level 3 — DevOps Workers
+    "DeployAgent":              LLAMA_70B,        # Dockerfile / CI/CD generation
+
+    # Level 3 — Reliability Workers
+    "DiagnosticsAgent":         LLAMA_8B,         # Fast diagnostics
+    "RepairAgent":              LLAMA_70B,        # Code repair
+    "RetryCoordinator":         LLAMA_8B,         # Simple coordination
+
+    # Level 3 — Utility / Cross-cutting
+    "KnowledgeMemoryAgent":     LLAMA_8B,         # Memory summarization
+    "HallucinationValidator":   LLAMA_8B,         # Validation
+    "SemanticValidator":        LLAMA_8B,         # Validation
+    "ContractValidator":        LLAMA_8B,         # Simple contract check
+    "HumanApprovalGateway":     LLAMA_70B,        # Gateway needs strong reasoning
+}
+
+
+# ─────────────────────────────────────────────────────────────
+#  CLIENT FACTORY
+# ─────────────────────────────────────────────────────────────
+
+def _get_client() -> AsyncOpenAI:
+    """Returns AsyncOpenAI client pointed at NVIDIA NIM."""
+    api_key = os.environ.get("NVIDIA_API_KEY")
+    if not api_key:
+        raise EnvironmentError(
+            "NVIDIA_API_KEY not set. "
+            "Get a free key at build.nvidia.com → no credit card needed."
+        )
+    return AsyncOpenAI(
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key=api_key,
+    )
+
+
+def get_model_for_agent(agent_name: str) -> str:
+    """
+    Returns the verified NIM model ID for a given agent.
+    Falls back to DEEPSEEK_FLASH if agent name not found.
+    """
+    model = AGENT_MODEL_MAP.get(agent_name)
+    if not model:
+        logger.warning(f"No model mapping for '{agent_name}' — defaulting to {DEEPSEEK_FLASH}")
+        return DEEPSEEK_FLASH
+    return model
+
+
+# ─────────────────────────────────────────────────────────────
+#  CORE INFERENCE CALL
+# ─────────────────────────────────────────────────────────────
+
+async def call_agent_llm(
+    agent_name: str,
+    prompt: str,
+    system: Optional[str] = None,
+    max_tokens: int = 2048,
+    temperature: float = 0.2,
+) -> str:
+    """
+    Main inference function. Selects model by agent name,
+    calls NVIDIA NIM, returns response string.
+    """
+    model = get_model_for_agent(agent_name)
+    client = _get_client()
+
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+
+    logger.info(f"[{agent_name}] Calling NIM model: {model}")
+
+    try:
+        response = await client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        content = response.choices[0].message.content
+        tokens_used = response.usage.total_tokens if response.usage else "?"
+        logger.info(f"[{agent_name}] Response received ({tokens_used} tokens)")
+        return content
+
+    except Exception as e:
+        logger.error(f"[{agent_name}] NIM call failed: {e}")
+        raise
+
+
+# ─────────────────────────────────────────────────────────────
+#  CONVENIENCE WRAPPERS
+# ─────────────────────────────────────────────────────────────
+
+async def orchestrator_call(prompt: str, system: str = "") -> str:
+    return await call_agent_llm("HeadOrchestrator", prompt, system)
+
+async def manager_call(manager_name: str, prompt: str, system: str = "") -> str:
+    return await call_agent_llm(manager_name, prompt, system)
+
+async def worker_call(worker_name: str, prompt: str, system: str = "") -> str:
+    return await call_agent_llm(worker_name, prompt, system)
+
+
+# ─────────────────────────────────────────────────────────────
+#  MODEL REGISTRY  (used by /agents endpoint)
+# ─────────────────────────────────────────────────────────────
+
+def get_full_model_registry() -> dict:
+    """Returns the full agent→model map with metadata."""
+    return {
+        agent: {
+            "model":    model,
+            "provider": "NVIDIA NIM",
+            "base_url": "https://integrate.api.nvidia.com/v1",
+        }
+        for agent, model in AGENT_MODEL_MAP.items()
+    }

@@ -1,0 +1,67 @@
+// NexusSwarm — Shared TypeScript types  (Phase 7 — 28 agents)
+
+export type AgentLevel   = 'orchestrator' | 'manager' | 'worker' | 'gateway'
+export type AgentStatus  = 'idle' | 'in_progress' | 'active' | 'done' | 'error' | 'blocked'
+export type PipelineName = 'planning' | 'engineering' | 'qa' | 'security' | 'devops' | 'reliability'
+export type PipelineStatus = 'idle' | 'active' | 'blocked' | 'done' | 'failed'
+export type EventType =
+  | 'agent_action'
+  | 'pipeline_update'
+  | 'conflict'
+  | 'escalation'
+  | 'complete'
+  | 'error'
+  | 'health_check'
+  | 'system'
+
+export interface AgentEvent {
+  event_id?:      string
+  task_id?:       string | null
+  event_type:     EventType
+  agent_name:     string
+  agent_level:    AgentLevel
+  parent_manager?: string | null
+  pipeline?:      PipelineName | null
+  message:        string
+  status:         AgentStatus
+  payload?:       Record<string, unknown>
+  timestamp:      string
+}
+
+export interface AgentRosterItem {
+  agent_name:     string
+  agent_level:    AgentLevel
+  parent_manager?: string | null
+  pipeline?:      PipelineName | null
+  current_status: AgentStatus
+  current_task?:  string | null
+  model:          string
+  provider:       string
+}
+
+export interface PipelineState {
+  name:     PipelineName
+  status:   PipelineStatus
+  progress: number
+}
+
+export interface TaskSubmission {
+  title:       string
+  description: string
+  priority:    number
+}
+
+export interface TaskResponse {
+  task_id:    string
+  status:     string
+  message:    string
+  created_at: string
+}
+
+export interface OutputItem {
+  output_type:   string
+  pipeline_name: string
+  content?:      string
+  file_path?:    string
+  created_at:    string
+}
