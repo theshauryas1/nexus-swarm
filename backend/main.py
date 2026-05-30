@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from config import get_settings
 from limiter import limiter
@@ -32,6 +33,32 @@ structlog.configure(
 )
 logging.basicConfig(level=logging.INFO)
 logger = structlog.get_logger(__name__)
+
+SECURITY_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "script-src 'self' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "img-src 'self' data:; "
+        "font-src 'self' data:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    ),
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+}
+
+
+def parse_csv_setting(value: str) -> list[str]:
+    return [
+        item.strip()
+        for item in value.split(",")
+        if item.strip() and item.strip() != "*"
+    ]
 
 
 # ─── Lifespan ─────────────────────────────────────────────────────
@@ -85,6 +112,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    for header, value in SECURITY_HEADERS.items():
+        response.headers[header] = value
+    if "X-Powered-By" in response.headers:
+        del response.headers["X-Powered-By"]
+    return response
+
 # ─── Rate Limiting ────────────────────────────────────────────────
 app.state.limiter = limiter
 
@@ -106,19 +143,33 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content=jsonable_encoder({"detail": "Invalid request payload.", "errors": exc.errors()}),
     )
 
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled server error", path=str(request.url.path))
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Something went wrong."},
+    )
+
 # ─── CORS ─────────────────────────────────────────────────────────
-allowed_origins = [
-    origin.strip()
-    for origin in settings.cors_allowed_origins.split(",")
-    if origin.strip() and origin.strip() != "*"
-]
+allowed_origins = parse_csv_setting(settings.cors_allowed_origins)
+allowed_methods = parse_csv_setting(settings.cors_allowed_methods) or ["GET", "POST"]
+allowed_headers = parse_csv_setting(settings.cors_allowed_headers) or ["Content-Type", "Authorization"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=allowed_methods,
+    allow_headers=allowed_headers,
+)
+
+trusted_hosts = parse_csv_setting(settings.trusted_hosts) or ["localhost", "127.0.0.1", "testserver"]
+
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=trusted_hosts,
 )
 
 # ─── Routes ───────────────────────────────────────────────────────

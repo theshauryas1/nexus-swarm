@@ -43,6 +43,17 @@ const AGENT_ICON: Record<string, string> = {
 
 function ContentBlock({ content }: { content: string }) {
   const lines = content.split('\n')
+
+  const renderStrongText = (line: string) => {
+    const parts = line.split(/(\*\*.+?\*\*)/g)
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>
+      }
+      return <span key={index}>{part}</span>
+    })
+  }
+
   return (
     <div className="text-xs text-slate-300 leading-relaxed space-y-0.5">
       {lines.map((line, i) => {
@@ -74,8 +85,7 @@ function ContentBlock({ content }: { content: string }) {
           )
         }
         if (line.trim() === '' || line === '---') return <div key={i} className="h-1" />
-        const boldified = line.replace(/\*\*(.+?)\*\*/g, (_, m) => `<strong>${m}</strong>`)
-        return <p key={i} dangerouslySetInnerHTML={{ __html: boldified }} />
+        return <p key={i}>{renderStrongText(line)}</p>
       })}
     </div>
   )

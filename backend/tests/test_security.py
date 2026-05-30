@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 from fastapi.testclient import TestClient
 from main import app
 from routes import active_tasks
@@ -87,3 +88,53 @@ def test_input_sanitization():
     # Clean up
     if task_id in active_tasks:
         del active_tasks[task_id]
+
+def test_security_headers_are_set():
+    response = client.get("/health")
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+    assert "X-Powered-By" not in response.headers
+
+def test_cors_is_explicit():
+    cors_middleware = next(
+        middleware
+        for middleware in app.user_middleware
+        if middleware.cls.__name__ == "CORSMiddleware"
+    )
+    assert "*" not in cors_middleware.kwargs["allow_origins"]
+    assert "*" not in cors_middleware.kwargs["allow_methods"]
+    assert "*" not in cors_middleware.kwargs["allow_headers"]
+    assert cors_middleware.kwargs["allow_credentials"] is False
+
+def test_trusted_hosts_are_explicit():
+    trusted_host_middleware = next(
+        middleware
+        for middleware in app.user_middleware
+        if middleware.cls.__name__ == "TrustedHostMiddleware"
+    )
+    assert "*" not in trusted_host_middleware.kwargs["allowed_hosts"]
+
+def test_no_raw_html_rendering_in_frontend():
+    frontend_src = Path(__file__).resolve().parents[2] / "frontend" / "src"
+    forbidden = ("dangerouslySetInnerHTML", "eval(", "new Function", "document.write", ".innerHTML")
+    offenders = []
+    for source_file in frontend_src.rglob("*"):
+        if source_file.suffix not in {".ts", ".tsx", ".js", ".jsx"}:
+            continue
+        text = source_file.read_text(encoding="utf-8")
+        offenders.extend(
+            f"{source_file.relative_to(frontend_src)}:{token}"
+            for token in forbidden
+            if token in text
+        )
+    assert offenders == []
+
+def test_no_public_upload_routes():
+    upload_routes = [
+        route.path
+        for route in app.routes
+        if "upload" in getattr(route, "path", "").lower()
+    ]
+    assert upload_routes == []
