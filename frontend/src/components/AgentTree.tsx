@@ -8,7 +8,7 @@ import {
   Shield, Rocket, Activity, Hexagon
 } from 'lucide-react'
 import clsx from 'clsx'
-import { useNexusStore } from '../store/agentStore'
+import { useNexusStore, safeGet } from '../store/agentStore'
 
 // ── Tree structure ────────────────────────────────────────────────
 interface TreeAgent {
@@ -111,12 +111,12 @@ export function AgentTree({ selectedAgent, onSelectAgent }: Props) {
   const taskRunning   = useNexusStore((s) => s.taskRunning)
 
   const toggle = (id: string) =>
-    setCollapsed(prev => ({ ...prev, [id]: !prev[id] }))
+    setCollapsed(prev => ({ ...prev, [id]: !safeGet(prev, id) }))
 
   // Count active agents per group
   const groupActive = (agents: TreeAgent[]) =>
     agents.filter(a => {
-      const s = agentStatuses[a.name]
+      const s = safeGet(agentStatuses, a.name)
       return s === 'in_progress' || s === 'active'
     }).length
 
@@ -138,7 +138,7 @@ export function AgentTree({ selectedAgent, onSelectAgent }: Props) {
       <div className="flex-1 overflow-y-auto py-1">
         {TREE.map((group) => {
           const { id, label, icon: Icon, color, agents } = group
-          const isOpen    = !collapsed[id]
+          const isOpen    = !safeGet(collapsed, id)
           const active    = groupActive(agents)
 
           return (
@@ -164,7 +164,7 @@ export function AgentTree({ selectedAgent, onSelectAgent }: Props) {
 
               {/* Agents */}
               {isOpen && agents.map((agent) => {
-                const status   = agentStatuses[agent.name] ?? 'idle'
+                const status   = safeGet(agentStatuses, agent.name) ?? 'idle'
                 const isActive = status === 'in_progress' || status === 'active'
                 const isDone   = status === 'done'
                 const isSelected = selectedAgent === agent.name
@@ -181,7 +181,7 @@ export function AgentTree({ selectedAgent, onSelectAgent }: Props) {
                     )}
                   >
                     {/* Status dot */}
-                    <span className={clsx('w-1.5 h-1.5 rounded-full flex-shrink-0', STATUS_DOT[status])} />
+                    <span className={clsx('w-1.5 h-1.5 rounded-full flex-shrink-0', safeGet(STATUS_DOT, status))} />
 
                     {/* Icon */}
                     <span className="text-xs flex-shrink-0">{agent.icon}</span>
@@ -198,7 +198,7 @@ export function AgentTree({ selectedAgent, onSelectAgent }: Props) {
 
                     {/* Status tag */}
                     {status !== 'idle' && (
-                      <span className={clsx('text-[8px] font-bold flex-shrink-0', STATUS_CLASS[status])}>
+                      <span className={clsx('text-[8px] font-bold flex-shrink-0', safeGet(STATUS_CLASS, status))}>
                         {status === 'in_progress' ? 'RUN' :
                          status === 'active'      ? 'RUN' :
                          status === 'done'        ? '✓'   :

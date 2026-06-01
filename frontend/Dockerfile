@@ -16,8 +16,12 @@ RUN npm run build
 
 # ── Serve stage ───────────────────────────────────────────────────
 FROM nginx:alpine AS runner
+
+# Remove the default nginx config to avoid conflicting port 80 listener
+RUN rm /etc/nginx/conf.d/default.conf
+
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

@@ -120,7 +120,12 @@ class TaskDB:
         title: str,
         description: str,
         priority: int = 1,
+        parent_task_id: str | None = None,
     ) -> dict:
+        metadata = {}
+        if parent_task_id:
+            metadata["parent_task_id"] = parent_task_id
+
         if _use_mock_db:
             import uuid
             task_id = str(uuid.uuid4())
@@ -132,18 +137,20 @@ class TaskDB:
                 "priority": priority,
                 "created_at": datetime.now(),
                 "updated_at": datetime.now(),
-                "completed_at": None
+                "completed_at": None,
+                "metadata": metadata
             }
             _MOCK_TASKS[task_id] = task
             return task
 
+        import json
         result = await self.session.execute(
             text("""
-                INSERT INTO tasks (title, description, priority)
-                VALUES (:title, :description, :priority)
-                RETURNING id, title, description, status, priority, created_at, updated_at
+                INSERT INTO tasks (title, description, priority, metadata)
+                VALUES (:title, :description, :priority, :metadata)
+                RETURNING id, title, description, status, priority, created_at, updated_at, metadata
             """),
-            {"title": title, "description": description, "priority": priority},
+            {"title": title, "description": description, "priority": priority, "metadata": json.dumps(metadata)},
         )
         await self.session.commit()
         row = result.mappings().one()

@@ -34,9 +34,9 @@ class Settings(BaseSettings):
     # ── NVIDIA NIM ─────────────────────────────────────────────────
     nvidia_api_key: str = ""
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
-    nim_orchestrator_model: str = "meta/llama-3.1-70b-instruct"
-    nim_manager_model: str = "meta/llama-3.1-70b-instruct"
-    nim_worker_model: str = "meta/llama-3.1-8b-instruct"
+    nim_orchestrator_model: str = "deepseek-ai/deepseek-v4-flash"
+    nim_manager_model: str = "qwen/qwen2.5-coder-32b-instruct"
+    nim_worker_model: str = "nv-mistralai/mistral-nemo-12b-instruct"
 
     # ── Azure OpenAI ───────────────────────────────────────────────
     azure_openai_api_key: str = ""
@@ -46,18 +46,16 @@ class Settings(BaseSettings):
     azure_openai_api_version: str = "2024-08-01-preview"
 
     # ── LLM Routing ────────────────────────────────────────────────
-    llm_provider: Literal["azure", "nvidia", "auto"] = "auto"
+    llm_provider: Literal["azure", "nvidia", "auto", "ollama"] = "auto"
 
     # ── Infrastructure ─────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379"
     database_url: str = ""
-    s3_bucket: str = ""
-    aws_region: str = "us-east-1"
-    aws_access_key_id: str = ""
-    aws_secret_access_key: str = ""
+    gcs_bucket: str = ""
+    project_id: str = ""
 
 
-    # ── GitHub MCP ─────────────────────────────────────────────────
+    # ── Bureaucracy / GitHub MCP ───────────────────────────────────
     github_token: str = ""
     github_repo_owner: str = ""
     github_default_repo: str = "nexusswarm-workspace"
@@ -74,6 +72,8 @@ class Settings(BaseSettings):
     @property
     def resolved_provider(self) -> str:
         """Resolve the actual provider based on availability."""
+        if self.llm_provider == "ollama":
+            return "ollama"
         if self.llm_provider == "azure":
             if not self.azure_available:
                 raise ValueError("Azure OpenAI configured but credentials missing")
@@ -97,6 +97,19 @@ class Settings(BaseSettings):
         Workers get the fast/cheap model.
         """
         provider = self.resolved_provider
+
+        if provider == "ollama":
+            return {
+                "config_list": [
+                    {
+                        "model": "gemma4:e2b",
+                        "api_key": "ollama",
+                        "base_url": "http://localhost:11434/v1",
+                    }
+                ],
+                "temperature": 0.2,
+                "timeout": self.agent_timeout_seconds,
+            }
 
         if provider == "mock":
             return {

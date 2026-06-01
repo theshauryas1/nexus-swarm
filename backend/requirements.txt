@@ -22,8 +22,10 @@ alembic==1.14.0
 # ─── Redis ───────────────────────────────────────────────────────
 redis[hiredis]==5.2.1
 
-# ── AWS SDK ──────────────────────────────────────────────────────
-boto3==1.43.15
+# ── Google Cloud SDKs ────────────────────────────────────────────
+google-cloud-storage==3.10.1
+google-cloud-secret-manager==2.28.0
+cloud-sql-python-connector[asyncpg]==1.20.3
 
 
 # ─── Data Validation ─────────────────────────────────────────────

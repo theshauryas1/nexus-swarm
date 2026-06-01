@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { Send, Loader2, CheckCircle2, Shield, Cpu, TestTube, Rocket, ClipboardList, Activity } from 'lucide-react'
 import clsx from 'clsx'
-import { getApiErrorMessage, useNexusStore } from '../store/agentStore'
+import { getApiErrorMessage, useNexusStore, safeGet } from '../store/agentStore'
 import type { PipelineName, PipelineStatus } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -40,7 +40,7 @@ function PipelineBar({
 }: {
   pipeline: { name: PipelineName; status: PipelineStatus; progress: number }
 }) {
-  const cfg = PIPELINE_CONFIG[pipeline.name]
+  const cfg = safeGet(PIPELINE_CONFIG, pipeline.name)
   const { Icon } = cfg
 
   const isActive  = pipeline.status === 'active'
@@ -78,7 +78,7 @@ function PipelineBar({
               'text-slate-600',
             )}
           >
-            {STATUS_LABEL[pipeline.status]}
+            {safeGet(STATUS_LABEL, pipeline.status)}
           </span>
         </div>
 

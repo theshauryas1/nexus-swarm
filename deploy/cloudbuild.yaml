@@ -1,0 +1,93 @@
+steps:
+  # ─── 1. Build Backend Image ──────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/nexusswarm-backend:latest'
+      - './backend'
+
+  # ─── 2. Push Backend Image ───────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/nexusswarm-backend:latest'
+
+  # ─── 3. Deploy Backend to Cloud Run ──────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        URLS_JSON=$$(gcloud run services describe nexusswarm-frontend \
+          --region=${_LOCATION} --format="value(metadata.annotations.'run.googleapis.com/urls')" 2>/dev/null || echo "")
+        FRONTEND_URLS=$$(echo "$$URLS_JSON" | tr -d '[]"')
+        if [ -z "$$FRONTEND_URLS" ]; then
+          CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
+        else
+          CORS_ORIGINS="$${FRONTEND_URLS},http://localhost:3000,http://127.0.0.1:3000"
+        fi
+        gcloud run deploy nexusswarm-backend \
+          --image=${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/nexusswarm-backend:latest \
+          --region=${_LOCATION} \
+          --platform=managed \
+          --allow-unauthenticated \
+          --add-cloudsql-instances=${_DB_CONNECTION} \
+          --set-env-vars="^;^APP_ENV=production;GCS_BUCKET=${_GCS_BUCKET};DATABASE_URL=postgresql+asyncpg://postgres:$$DB_PASSWORD@/nexusswarm?host=/cloudsql/${_DB_CONNECTION};CORS_ALLOWED_ORIGINS=$${CORS_ORIGINS};CORS_ALLOWED_METHODS=GET,POST,OPTIONS;CORS_ALLOWED_HEADERS=Content-Type,Authorization;TRUSTED_HOSTS=localhost,127.0.0.1,testserver,nexusswarm-backend-titbewudzq-uc.a.run.app,nexusswarm-backend-537381825142.us-central1.run.app" \
+          --set-secrets="NVIDIA_API_KEY=nexusswarm-nvidia-key:latest,DB_PASSWORD=nexusswarm-db-pass:latest"
+
+  # ─── 3b. Query Backend Cloud Run URL ──────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        BACKEND_URL=$$(gcloud run services describe nexusswarm-backend --region=${_LOCATION} --format="value(status.url)")
+        echo "$$BACKEND_URL" > backend_url.txt
+        echo "$$BACKEND_URL" | sed 's/http/ws/' > ws_url.txt
+
+  # ─── 4. Build Frontend Image (passing Backend URL as build args) ────
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        BACKEND_URL=$$(cat backend_url.txt)
+        WS_URL=$$(cat ws_url.txt)
+        echo "Backend URL: $$BACKEND_URL"
+        echo "Websocket URL: $$WS_URL"
+        docker build \
+          --build-arg VITE_API_URL=$$BACKEND_URL \
+          --build-arg VITE_WS_URL=$$WS_URL \
+          -t ${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/nexusswarm-frontend:latest \
+          ./frontend
+
+  # ─── 5. Push Frontend Image ──────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/nexusswarm-frontend:latest'
+
+  # ─── 6. Deploy Frontend to Cloud Run ─────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'nexusswarm-frontend'
+      - '--image=${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/nexusswarm-frontend:latest'
+      - '--region=${_LOCATION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=8080'
+      - '--cpu=1'
+      - '--memory=512Mi'
+      - '--timeout=60'
+      - '--min-instances=0'
+      - '--max-instances=3'
+
+substitutions:
+  _LOCATION: 'us-central1'
+  _REPO: 'nexusswarm'
+  _DB_CONNECTION: 'nexusswarm-54c977:us-central1:nexusswarm-db'
+  _GCS_BUCKET: 'nexusswarm-outputs-nexusswarm-54c977'

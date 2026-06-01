@@ -4,7 +4,7 @@
 import { useEffect, useRef } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
-import { useNexusStore } from '../store/agentStore'
+import { useNexusStore, safeGet } from '../store/agentStore'
 import type { AgentEvent, AgentLevel, AgentStatus } from '../types'
 
 // ── Level badge styles ────────────────────────────────────────────
@@ -39,7 +39,7 @@ const EVENT_BORDER: Partial<Record<string, string>> = {
 
 // ── LogEntry ──────────────────────────────────────────────────────
 function LogEntry({ event }: { event: AgentEvent }) {
-  const borderColor = EVENT_BORDER[event.event_type] ?? 'border-l-surface-400'
+  const borderColor = safeGet(EVENT_BORDER, event.event_type) ?? 'border-l-surface-400'
 
   return (
     <div
@@ -51,10 +51,10 @@ function LogEntry({ event }: { event: AgentEvent }) {
     >
       <div className="flex items-center gap-2 flex-wrap">
         {/* Status dot */}
-        <span className={clsx('w-1.5 h-1.5 rounded-full flex-shrink-0', STATUS_DOT[event.status] ?? 'bg-slate-600')} />
+        <span className={clsx('w-1.5 h-1.5 rounded-full flex-shrink-0', safeGet(STATUS_DOT, event.status) ?? 'bg-slate-600')} />
 
         {/* Agent level badge */}
-        <span className={clsx('text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border tracking-wider', LEVEL_STYLE[event.agent_level])}>
+        <span className={clsx('text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border tracking-wider', safeGet(LEVEL_STYLE, event.agent_level))}>
           {event.agent_level.slice(0, 4)}
         </span>
 

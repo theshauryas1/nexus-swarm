@@ -1,0 +1,3 @@
+CORS_ALLOWED_ORIGINS: "https://nexusswarm-frontend-titbewudzq-uc.a.run.app,https://nexusswarm-frontend-537381825142.us-central1.run.app,http://localhost:3000"
+CORS_ALLOWED_METHODS: "GET,POST,OPTIONS"
+CORS_ALLOWED_HEADERS: "Content-Type,Authorization"

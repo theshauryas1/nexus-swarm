@@ -18,6 +18,13 @@ if _env_path.exists():
     from dotenv import load_dotenv
     load_dotenv(_env_path, override=False)
 
+# Security helpers — sanitize inputs/outputs, track token budgets
+from security_utils import (
+    sanitize_llm_input,
+    sanitize_llm_output,
+    record_token_usage,
+)
+
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────
@@ -95,7 +102,14 @@ AGENT_MODEL_MAP: dict[str, str] = {
 # ─────────────────────────────────────────────────────────────
 
 def _get_client() -> AsyncOpenAI:
-    """Returns AsyncOpenAI client pointed at NVIDIA NIM."""
+    """Returns AsyncOpenAI client pointed at LLM provider."""
+    provider = os.environ.get("LLM_PROVIDER", "nvidia")
+    if provider == "ollama":
+        return AsyncOpenAI(
+            base_url="http://localhost:11434/v1",
+            api_key="ollama",
+        )
+    
     api_key = os.environ.get("NVIDIA_API_KEY")
     if not api_key:
         raise EnvironmentError(
@@ -113,6 +127,9 @@ def get_model_for_agent(agent_name: str) -> str:
     Returns the verified NIM model ID for a given agent.
     Falls back to DEEPSEEK_FLASH if agent name not found.
     """
+    provider = os.environ.get("LLM_PROVIDER", "nvidia")
+    if provider == "ollama":
+        return "gemma4:e2b"
     model = AGENT_MODEL_MAP.get(agent_name)
     if not model:
         logger.warning(f"No model mapping for '{agent_name}' — defaulting to {DEEPSEEK_FLASH}")
@@ -125,6 +142,8 @@ def get_model_for_agent(agent_name: str) -> str:
 # ─────────────────────────────────────────────────────────────
 
 async def call_agent_llm(
+
+
     agent_name: str,
     prompt: str,
     system: Optional[str] = None,
@@ -133,17 +152,22 @@ async def call_agent_llm(
 ) -> str:
     """
     Main inference function. Selects model by agent name,
-    calls NVIDIA NIM, returns response string.
+    calls LLM provider, returns response string.
     """
-    model = get_model_for_agent(agent_name)
+    provider = os.environ.get("LLM_PROVIDER", "nvidia")
+    model = "gemma4:e2b" if provider == "ollama" else get_model_for_agent(agent_name)
     client = _get_client()
+
+    # ── Security: sanitize user-supplied prompt before forwarding
+    # (prevents prompt injection; system prompt is trusted internal text)
+    safe_prompt = sanitize_llm_input(prompt)
 
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
-    messages.append({"role": "user", "content": prompt})
+    messages.append({"role": "user", "content": safe_prompt})
 
-    logger.info(f"[{agent_name}] Calling NIM model: {model}")
+    logger.info(f"[{agent_name}] Calling {provider} model: {model}")
 
     try:
         response = await client.chat.completions.create(
@@ -153,12 +177,18 @@ async def call_agent_llm(
             temperature=temperature,
         )
         content = response.choices[0].message.content
-        tokens_used = response.usage.total_tokens if response.usage else "?"
+        tokens_used = response.usage.total_tokens if (response.usage and hasattr(response.usage, "total_tokens")) else 0
         logger.info(f"[{agent_name}] Response received ({tokens_used} tokens)")
-        return content
+
+        # ── Security: record token usage for budget tracking
+        if tokens_used:
+            record_token_usage("system", int(tokens_used))
+
+        # ── Security: sanitize LLM output before returning (XSS defence-in-depth)
+        return sanitize_llm_output(content)
 
     except Exception as e:
-        logger.error(f"[{agent_name}] NIM call failed: {e}")
+        logger.error(f"[{agent_name}] {provider} call failed: {e}")
         raise
 
 

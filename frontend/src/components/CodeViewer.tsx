@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { X, Copy, CheckCircle2, FileCode2, FileText, File } from 'lucide-react'
 import clsx from 'clsx'
-import { useNexusStore } from '../store/agentStore'
+import { useNexusStore, safeGet } from '../store/agentStore'
 
 // File icon per agent type
 const FILE_ICON: Record<string, React.ElementType> = {
@@ -112,8 +112,8 @@ export function CodeViewer({ activeAgent, onCloseTab, openTabs, onTabClick }: Pr
   const [copied, setCopied] = useState(false)
 
   const activeOutput = outputItems.find(o => o.agent === activeAgent)
-  const ext = activeAgent ? (FILE_EXT[activeAgent] ?? FILE_EXT.default) : '.txt'
-  const IconComp = activeAgent ? (FILE_ICON[activeAgent] ?? FILE_ICON.default) : File
+  const ext = activeAgent ? (safeGet(FILE_EXT, activeAgent) ?? FILE_EXT.default) : '.txt'
+  const IconComp = activeAgent ? (safeGet(FILE_ICON, activeAgent) ?? FILE_ICON.default) : File
 
   const copyContent = () => {
     if (activeOutput) {
@@ -138,8 +138,8 @@ export function CodeViewer({ activeAgent, onCloseTab, openTabs, onTabClick }: Pr
           openTabs.map((agentName) => {
             const isActive = agentName === activeAgent
             const hasOutput = outputItems.some(o => o.agent === agentName)
-            const agentExt = FILE_EXT[agentName] ?? '.txt'
-            const AgentIcon = FILE_ICON[agentName] ?? FileText
+            const agentExt = safeGet(FILE_EXT, agentName) ?? '.txt'
+            const AgentIcon = safeGet(FILE_ICON, agentName) ?? FileText
 
             return (
               <div

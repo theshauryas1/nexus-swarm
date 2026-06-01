@@ -81,13 +81,13 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("⚠️  PostgreSQL not reachable — check connection")
 
-    # Initialize S3 client
+    # Initialize GCS client
     from memory.file_storage import get_storage_client
-    s3_client = get_storage_client()
-    if settings.s3_bucket and s3_client:
-        logger.info("✅ Amazon S3 Storage ready, bucket: %s", settings.s3_bucket)
-    elif settings.s3_bucket:
-        logger.warning("⚠️ S3 bucket configured but client failed to initialize")
+    gcs_client = get_storage_client()
+    if settings.gcs_bucket and gcs_client:
+        logger.info("✅ Google Cloud Storage ready, bucket: %s", settings.gcs_bucket)
+    elif settings.gcs_bucket:
+        logger.warning("⚠️ GCS bucket configured but client failed to initialize")
 
     yield
 

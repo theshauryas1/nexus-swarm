@@ -1,8 +1,8 @@
 // components/IDE/AgentTreePanel.tsx — VS Code Explorer style agent hierarchy tree
 // Reads live statuses from Zustand store
 
-import { useState } from "react"
-import { getApiErrorMessage, useNexusStore } from "../../store/agentStore"
+import { useState, useEffect } from "react"
+import { getApiErrorMessage, useNexusStore, safeGet } from "../../store/agentStore"
 
 type Panel = "agents" | "files" | "outputs" | "pipelines"
 interface Props { activePanel: Panel }
@@ -64,8 +64,8 @@ export function AgentTreePanel({ activePanel }: Props) {
   const rosterMap = Object.fromEntries(roster.map(a => [a.agent_name, a]))
 
   const Dot = ({ name }: { name: string }) => {
-    const s = agentStatuses[name] ?? "idle"
-    const { color, pulse } = STATUS_DOT[s] ?? STATUS_DOT.idle
+    const s = safeGet(agentStatuses, name) ?? "idle"
+    const { color, pulse } = safeGet(STATUS_DOT, s) ?? safeGet(STATUS_DOT, "idle")
     return (
       <span style={{
         display: "inline-block", width: 7, height: 7,
@@ -77,9 +77,9 @@ export function AgentTreePanel({ activePanel }: Props) {
   }
 
   const ModelBadge = ({ name }: { name: string }) => {
-    const model = rosterMap[name]?.model
+    const model = safeGet(rosterMap, name)?.model
     if (!model) return null
-    const short = MODEL_SHORT[model] ?? model.split("/")[1]?.slice(0, 10) ?? ""
+    const short = safeGet(MODEL_SHORT, model) ?? model.split("/")[1]?.slice(0, 10) ?? ""
     return <span style={{ fontSize: 9, color: "#444", marginLeft: "auto", paddingRight: 8, whiteSpace: "nowrap" }}>{short}</span>
   }
 
@@ -87,7 +87,7 @@ export function AgentTreePanel({ activePanel }: Props) {
     const isOpen = !collapsed.has(node.name)
     const hasChildren = node.children?.length > 0
     const indent = depth * 14 + 8
-    const color = LEVEL_COLOR[node.level] ?? "#d4d4d4"
+    const color = safeGet(LEVEL_COLOR, node.level) ?? "#d4d4d4"
 
     return (
       <div key={node.name}>
@@ -173,15 +173,51 @@ export function AgentTreePanel({ activePanel }: Props) {
   )
 
   const FilesRows = () => {
-    const files = useNexusStore(s => s.files)
-    const selectFile = useNexusStore(s => s.selectFile)
+    const recentTasks = useNexusStore(s => s.recentTasks)
+    const expandedSessions = useNexusStore(s => s.expandedSessions)
+    const fetchRecentTasks = useNexusStore(s => s.fetchRecentTasks)
+    const fetchSessionFiles = useNexusStore(s => s.fetchSessionFiles)
+    const selectSessionFile = useNexusStore(s => s.selectSessionFile)
     const selectedFile = useNexusStore(s => s.selectedFile)
-    const taskId = useNexusStore(s => s.taskId)
-    const fetchFiles = useNexusStore(s => s.fetchFiles)
+    const activeTaskId = useNexusStore(s => s.taskId)
     const setApiError = useNexusStore(s => s.setApiError)
+    
+    const [openFolders, setOpenFolders] = useState<Set<string>>(new Set([activeTaskId || ""]))
+    const [searchQuery, setSearchQuery] = useState("")
 
-    const handleDownloadZip = async () => {
-      if (!taskId) return
+    // Fetch recent tasks on mount
+    useEffect(() => {
+      fetchRecentTasks()
+    }, [])
+
+    // Synchronize open folders with the activeTaskId if changed
+    useEffect(() => {
+      if (activeTaskId) {
+        setOpenFolders(prev => {
+          const next = new Set(prev)
+          next.add(activeTaskId)
+          return next
+        })
+        fetchSessionFiles(activeTaskId)
+      }
+    }, [activeTaskId])
+
+    const toggleFolder = async (taskId: string) => {
+      setOpenFolders(prev => {
+        const next = new Set(prev)
+        if (next.has(taskId)) {
+          next.delete(taskId)
+        } else {
+          next.add(taskId)
+          // Always refresh files when expanding a folder to ensure it is up-to-date
+          fetchSessionFiles(taskId)
+        }
+        return next
+      })
+    }
+
+    const handleDownloadZip = async (taskId: string, title: string, e: React.MouseEvent) => {
+      e.stopPropagation()
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
       try {
         const response = await fetch(`${apiUrl}/files/${taskId}/download`)
@@ -193,7 +229,7 @@ export function AgentTreePanel({ activePanel }: Props) {
         const url = URL.createObjectURL(blob)
         const a = document.createElement("a")
         a.href = url
-        a.download = `nexusswarm_task_${taskId}.zip`
+        a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_files.zip`
         document.body.appendChild(a)
         a.click()
         a.remove()
@@ -204,72 +240,143 @@ export function AgentTreePanel({ activePanel }: Props) {
       }
     }
 
-    if (!taskId) {
-      return <div style={{ padding:"16px 12px", fontSize:11, color:"#555" }}>No task active. Submit a task first.</div>
+    const getFileIcon = (name: string) => {
+      if (name.endsWith(".py")) return "🐍"
+      if (name.endsWith(".yaml") || name.endsWith(".yml")) return "📋"
+      if (name.endsWith(".tsx")) return "⚛️"
+      if (name.endsWith(".json")) return "🔒"
+      if (name.endsWith(".md")) return "📝"
+      if (name === "Dockerfile") return "🐳"
+      return "📄"
     }
 
+    // Filter recent tasks/sessions based on search
+    const filteredTasks = recentTasks.filter(task => 
+      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      task.task_id.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
     return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
-        <div style={{ flex: 1, overflowY: "auto", paddingTop: 4 }}>
-          {files.length === 0 ? (
-            <div style={{ padding:"16px 12px", fontSize:11, color:"#555" }}>
-              No files generated yet.
-              <button 
-                onClick={() => fetchFiles()}
-                style={{
-                  display: "block", marginTop: 8, background: "#3c3c3c", 
-                  color: "#ccc", border: "none", padding: "4px 8px", 
-                  borderRadius: 3, cursor: "pointer", fontSize: 10
-                }}
-              >Refresh</button>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        {/* Search bar */}
+        <div style={{ padding: "8px 12px", borderBottom: "1px solid #3c3c3c", display: "flex", gap: 6, flexShrink: 0 }}>
+          <input
+            type="text"
+            placeholder="Search sessions/files..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1, background: "#1e1e1e", border: "1px solid #3c3c3c",
+              borderRadius: 3, padding: "4px 8px", color: "#ccc",
+              fontSize: 11, outline: "none"
+            }}
+          />
+          <button
+            onClick={() => fetchRecentTasks()}
+            title="Refresh Explorer"
+            style={{
+              background: "#3c3c3c", border: "none", color: "#ccc",
+              padding: "4px 6px", borderRadius: 3, cursor: "pointer",
+              fontSize: 11
+            }}
+          >
+            ↻
+          </button>
+        </div>
+
+        {/* Sessions list */}
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", paddingTop: 4 }}>
+          {filteredTasks.length === 0 ? (
+            <div style={{ padding: "16px 12px", fontSize: 11, color: "#555" }}>
+              No sessions found. Launch a task using the Command Palette!
             </div>
           ) : (
-            files.map(f => {
-              const isSelected = selectedFile === f.name
-              const icon = 
-                f.name.endsWith(".py") ? "🐍" :
-                f.name.endsWith(".yaml") || f.name.endsWith(".yml") ? "📋" :
-                f.name.endsWith(".tsx") ? "⚛️" :
-                f.name.endsWith(".json") ? "🔒" :
-                f.name.endsWith(".md") ? "📝" :
-                f.name === "Dockerfile" ? "🐳" : "📄"
+            filteredTasks.map(task => {
+              const isOpen = openFolders.has(task.task_id)
+              const isActive = activeTaskId === task.task_id
+              const filesInFolder = safeGet(expandedSessions, task.task_id) ?? []
 
               return (
-                <div key={f.name}
-                  onClick={() => selectFile(f.name)}
-                  style={{
-                    display:"flex", alignItems:"center", gap:8,
-                    padding:"6px 12px", fontSize:12,
-                    color: isSelected ? "#ffffff" : "#cccccc",
-                    background: isSelected ? "#37373d" : "transparent",
-                    cursor:"pointer"
-                  }}
-                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#2a2d2e" }}
-                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent" }}
-                >
-                  <span>{icon}</span>
-                  <span>{f.name}</span>
-                  <span style={{ marginLeft:"auto", fontSize:9, color:"#555" }}>{(f.size / 1024).toFixed(1)} KB</span>
+                <div key={task.task_id} style={{ display: "flex", flexDirection: "column" }}>
+                  {/* Folder row */}
+                  <div
+                    onClick={() => toggleFolder(task.task_id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "6px 12px 6px 10px", fontSize: 12,
+                      color: isActive ? "#6366f1" : "#cccccc",
+                      background: isActive ? "rgba(99, 102, 241, 0.05)" : "transparent",
+                      borderLeft: isActive ? "2px solid #6366f1" : "2px solid transparent",
+                      cursor: "pointer", fontWeight: isActive ? 600 : 400,
+                      userSelect: "none"
+                    }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#2a2d2e" }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent" }}
+                  >
+                    <span style={{ fontSize: 9, width: 8, color: "#858585" }}>{isOpen ? "▾" : "▸"}</span>
+                    <span style={{ fontSize: 13 }}>{isOpen ? "📂" : "📁"}</span>
+                    <span style={{
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
+                      color: isActive ? "#ffffff" : "#cccccc"
+                    }} title={task.title}>
+                      {task.title}
+                    </span>
+                    {/* Hover Actions */}
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <span 
+                        onClick={(e) => handleDownloadZip(task.task_id, task.title, e)}
+                        title="Download ZIP"
+                        style={{ cursor: "pointer", fontSize: 11, color: "#858585" }}
+                        onMouseEnter={e => e.currentTarget.style.color = "#ffffff"}
+                        onMouseLeave={e => e.currentTarget.style.color = "#858585"}
+                      >
+                        📥
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Nested files */}
+                  {isOpen && (
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      {filesInFolder.length === 0 ? (
+                        <div style={{ padding: "4px 12px 4px 34px", fontSize: 10, color: "#666", fontStyle: "italic" }}>
+                          Empty / Loading files...
+                        </div>
+                      ) : (
+                        filesInFolder.map((f: any) => {
+                          const isSelected = selectedFile === f.name && isActive
+                          return (
+                            <div key={f.name}
+                              onClick={() => selectSessionFile(task.task_id, f.name)}
+                              style={{
+                                display: "flex", alignItems: "center", gap: 8,
+                                padding: "4px 12px 4px 30px", fontSize: 11,
+                                color: isSelected ? "#ffffff" : "#aaaaaa",
+                                background: isSelected ? "#37373d" : "transparent",
+                                cursor: "pointer",
+                                userSelect: "none"
+                              }}
+                              onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#2a2d2e" }}
+                              onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent" }}
+                            >
+                              <span>{getFileIcon(f.name)}</span>
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                                {f.name}
+                              </span>
+                              <span style={{ fontSize: 9, color: "#555" }}>
+                                {(f.size / 1024).toFixed(1)} KB
+                              </span>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })
           )}
         </div>
-        {files.length > 0 && (
-          <div style={{ padding: 12, borderTop: "1px solid #3c3c3c", display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
-            <button
-              onClick={handleDownloadZip}
-              style={{
-                width: "100%", background: "#6366f1", color: "#ffffff",
-                border: "none", padding: "6px 10px", borderRadius: 4,
-                cursor: "pointer", fontSize: 11, fontWeight: 600,
-                textAlign: "center"
-              }}
-            >
-              📥 Download ZIP
-            </button>
-          </div>
-        )}
       </div>
     )
   }

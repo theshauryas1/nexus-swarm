@@ -2,7 +2,7 @@
 // (Renamed to avoid clash with existing TerminalPanel.tsx)
 
 import { useEffect, useRef, useState } from "react"
-import { useNexusStore } from "../../store/agentStore"
+import { useNexusStore, safeGet } from "../../store/agentStore"
 
 const LEVEL_COLOR: Record<string, string> = {
   orchestrator: "#6366f1",
@@ -69,7 +69,7 @@ export function IDETerminalPanel() {
         ))}
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10, padding:"0 12px" }}>
           <button
-            onClick={() => window.open("https://console.aws.amazon.com/cloudshell/home", "_blank")}
+            onClick={() => window.open("https://shell.cloud.google.com/?show=terminal", "_blank")}
             style={{
               background: "#3c3c3c", color: "#cccccc", border: "none",
               padding: "2px 8px", borderRadius: 3, cursor: "pointer",
@@ -105,9 +105,9 @@ export function IDETerminalPanel() {
           )}
 
           {[...events].reverse().map((log, i) => {
-            const prefix = STATUS_PREFIX[log.status] ?? "○"
+            const prefix = safeGet(STATUS_PREFIX, log.status) ?? "○"
             const color  = log.status === "error" || log.status === "blocked"
-              ? "#f44747" : LEVEL_COLOR[log.agent_level] ?? "#9cdcfe"
+              ? "#f44747" : safeGet(LEVEL_COLOR, log.agent_level) ?? "#9cdcfe"
             return (
               <div key={log.event_id ?? i} style={{ display:"flex", gap:8, marginBottom:1 }}>
                 <span style={{ color:"#444", flexShrink:0, minWidth:64, fontFamily:"monospace" }}>

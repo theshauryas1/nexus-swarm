@@ -1,0 +1,34 @@
+steps:
+  # ─── 1. Build Frontend Image ─────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'VITE_API_URL=https://nexusswarm-backend-titbewudzq-uc.a.run.app'
+      - '--build-arg'
+      - 'VITE_WS_URL=wss://nexusswarm-backend-titbewudzq-uc.a.run.app'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/nexusswarm/nexusswarm-frontend:latest'
+      - './frontend'
+
+  # ─── 2. Push Frontend Image ──────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/${PROJECT_ID}/nexusswarm/nexusswarm-frontend:latest'
+
+  # ─── 3. Deploy Frontend to Cloud Run ─────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'nexusswarm-frontend'
+      - '--image=us-central1-docker.pkg.dev/${PROJECT_ID}/nexusswarm/nexusswarm-frontend:latest'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=8080'
+      - '--cpu=1'
+      - '--memory=512Mi'
+      - '--timeout=60'

@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { Clock, CheckCircle2, XCircle, Loader2, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
-import { getApiErrorMessage } from '../store/agentStore'
+import { getApiErrorMessage, safeGet } from '../store/agentStore'
 
 interface TaskSummary {
   task_id: string
@@ -86,7 +86,7 @@ export function TaskHistory({ onSelect, selectedId }: Props) {
           <div className="text-center py-8 text-xs text-slate-600">No tasks yet</div>
         ) : (
           tasks.map((task) => {
-            const cfg   = STATUS_CONFIG[task.status] ?? STATUS_CONFIG['pending']
+            const cfg   = safeGet(STATUS_CONFIG, task.status) ?? STATUS_CONFIG.pending
             const Icon  = cfg.icon
             const isSelected = task.task_id === selectedId
 

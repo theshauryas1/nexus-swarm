@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { FileText, Users, Activity, Copy, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
-import { useNexusStore } from '../store/agentStore'
+import { useNexusStore, safeGet } from '../store/agentStore'
 import type { AgentLevel } from '../types'
 
 const LEVEL_COLORS: Record<AgentLevel, { text: string; bg: string; border: string }> = {
@@ -126,9 +126,9 @@ export function OutputPanel() {
               </div>
             ) : (
               roster.map((agent) => {
-                const clr    = LEVEL_COLORS[agent.agent_level] ?? LEVEL_COLORS.worker
-                const status = agentStatuses[agent.agent_name] ?? agent.current_status ?? 'idle'
-                const icon   = AGENT_ICON[agent.agent_name] ?? '🤖'
+                const clr    = safeGet(LEVEL_COLORS, agent.agent_level) ?? LEVEL_COLORS.worker
+                const status = safeGet(agentStatuses, agent.agent_name) ?? agent.current_status ?? 'idle'
+                const icon   = safeGet(AGENT_ICON, agent.agent_name) ?? '🤖'
                 return (
                   <div
                     key={agent.agent_name}
@@ -146,7 +146,7 @@ export function OutputPanel() {
                       <div className="text-[8px] text-slate-600 font-mono truncate">{agent.model?.split('/').pop() ?? '—'}</div>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      <span className={clsx('w-1.5 h-1.5 rounded-full', STATUS_DOT[status] ?? 'bg-slate-600')} />
+                      <span className={clsx('w-1.5 h-1.5 rounded-full', safeGet(STATUS_DOT, status) ?? 'bg-slate-600')} />
                       <span className={clsx('text-[7px] font-bold uppercase px-1 py-0.5 rounded border', clr.text, clr.bg, clr.border)}>
                         {agent.agent_level?.slice(0, 3)}
                       </span>
@@ -174,7 +174,7 @@ export function OutputPanel() {
               </div>
             ) : (
               outputItems.map((item) => {
-                const icon    = AGENT_ICON[item.agent] ?? '📄'
+                const icon    = safeGet(AGENT_ICON, item.agent) ?? '📄'
                 const isOpen  = expanded === item.agent
                 const preview = item.content.slice(0, 100).replace(/\n/g, ' ')
                 const isCopied = copied === item.agent

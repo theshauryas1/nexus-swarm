@@ -8,8 +8,7 @@ import io
 import logging
 import os
 import zipfile
-import boto3
-from botocore.exceptions import ClientError
+from google.cloud import storage
 
 from config import get_settings
 
@@ -58,21 +57,15 @@ def get_storage_client():
     global _storage_client
     if _storage_client is None:
         settings = get_settings()
-        if settings.s3_bucket:
+        if settings.gcs_bucket:
             try:
-                # Try initialization using optional credentials or default session credentials
-                session_opts = {}
-                if settings.aws_access_key_id:
-                    session_opts["aws_access_key_id"] = settings.aws_access_key_id
-                if settings.aws_secret_access_key:
-                    session_opts["aws_secret_access_key"] = settings.aws_secret_access_key
-                if settings.aws_region:
-                    session_opts["region_name"] = settings.aws_region
-
-                _storage_client = boto3.client("s3", **session_opts)
-                logger.info("✅ S3 Client initialized successfully")
+                opts = {}
+                if settings.project_id:
+                    opts["project"] = settings.project_id
+                _storage_client = storage.Client(**opts)
+                logger.info("✅ GCS Client initialized successfully")
             except Exception as e:
-                logger.warning("⚠️ Failed to initialize S3 Client: %s", e)
+                logger.warning("⚠️ Failed to initialize GCS Client: %s", e)
                 _storage_client = None
     return _storage_client
 
@@ -87,7 +80,7 @@ def get_lang_for_filename(filename: str) -> str:
 
 async def save_file(task_id: str, agent_name: str, content: str) -> str:
     """
-    Saves an agent output content to local filesystem AND Amazon S3 if enabled.
+    Saves an agent output content to local filesystem AND Google Cloud Storage (GCS) if enabled.
     Returns the file path or URI where it was saved.
     """
     filename = get_filename_for_agent(agent_name)
@@ -104,21 +97,18 @@ async def save_file(task_id: str, agent_name: str, content: str) -> str:
         f.write(content)
     logger.info("Saved local file: %s", local_path)
 
-    # 2. Save to S3 if configured
-    if settings.s3_bucket:
+    # 2. Save to GCS if configured
+    if settings.gcs_bucket:
         try:
             client = get_storage_client()
             if client:
-                client.put_object(
-                    Bucket=settings.s3_bucket,
-                    Key=f"{task_id}/{filename}",
-                    Body=content.encode("utf-8"),
-                    ContentType="text/plain",
-                )
-                logger.info("Uploaded to S3: s3://%s/%s/%s", settings.s3_bucket, task_id, filename)
-                return f"s3://{settings.s3_bucket}/{task_id}/{filename}"
+                bucket = client.bucket(settings.gcs_bucket)
+                blob = bucket.blob(f"{task_id}/{filename}")
+                blob.upload_from_string(content, content_type="text/plain")
+                logger.info("Uploaded to GCS: gs://%s/%s/%s", settings.gcs_bucket, task_id, filename)
+                return f"gs://{settings.gcs_bucket}/{task_id}/{filename}"
         except Exception as e:
-            logger.error("❌ Failed to upload file to S3: %s", e)
+            logger.error("❌ Failed to upload file to GCS: %s", e)
 
     return local_path
 
@@ -130,29 +120,25 @@ async def list_files(task_id: str) -> list[dict]:
     settings = get_settings()
     files_list = []
 
-    # If S3 bucket is enabled, read from S3 to ensure multi-replica consistency
-    if settings.s3_bucket:
+    # If GCS bucket is enabled, read from GCS to ensure multi-replica consistency
+    if settings.gcs_bucket:
         try:
             client = get_storage_client()
             if client:
-                response = client.list_objects_v2(
-                    Bucket=settings.s3_bucket,
-                    Prefix=f"{task_id}/",
-                )
-                if "Contents" in response:
-                    for item in response["Contents"]:
-                        key = item["Key"]
-                        filename = os.path.basename(key)
-                        if filename:
-                            files_list.append({
-                                "name": filename,
-                                "size": item["Size"],
-                                "lang": get_lang_for_filename(filename),
-                            })
+                bucket = client.bucket(settings.gcs_bucket)
+                blobs = bucket.list_blobs(prefix=f"{task_id}/")
+                for blob in blobs:
+                    filename = os.path.basename(blob.name)
+                    if filename:
+                        files_list.append({
+                            "name": filename,
+                            "size": blob.size or 0,
+                            "lang": get_lang_for_filename(filename),
+                        })
                 if files_list:
                     return files_list
         except Exception as e:
-            logger.error("Failed to list files from S3: %s", e)
+            logger.error("Failed to list files from GCS: %s", e)
 
     # Fallback to local workspace files
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "workspace"))
@@ -175,18 +161,16 @@ async def get_file_content(task_id: str, filename: str) -> str | None:
     """
     settings = get_settings()
 
-    # Read from S3 first
-    if settings.s3_bucket:
+    # Read from GCS first
+    if settings.gcs_bucket:
         try:
             client = get_storage_client()
             if client:
-                response = client.get_object(
-                    Bucket=settings.s3_bucket,
-                    Key=f"{task_id}/{filename}",
-                )
-                return response["Body"].read().decode("utf-8")
+                bucket = client.bucket(settings.gcs_bucket)
+                blob = bucket.blob(f"{task_id}/{filename}")
+                return blob.download_as_bytes().decode("utf-8")
         except Exception as e:
-            logger.error("Failed to download file from S3: %s", e)
+            logger.error("Failed to download file from GCS: %s", e)
 
     # Local fallback
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "workspace"))
@@ -206,28 +190,20 @@ async def create_zip_archive(task_id: str) -> io.BytesIO:
     files_added = False
 
     with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
-        if settings.s3_bucket:
+        if settings.gcs_bucket:
             try:
                 client = get_storage_client()
                 if client:
-                    response = client.list_objects_v2(
-                        Bucket=settings.s3_bucket,
-                        Prefix=f"{task_id}/",
-                    )
-                    if "Contents" in response:
-                        for item in response["Contents"]:
-                            key = item["Key"]
-                            filename = os.path.basename(key)
-                            if filename:
-                                obj_resp = client.get_object(
-                                    Bucket=settings.s3_bucket,
-                                    Key=key,
-                                )
-                                content = obj_resp["Body"].read()
-                                zip_file.writestr(filename, content)
-                                files_added = True
+                    bucket = client.bucket(settings.gcs_bucket)
+                    blobs = bucket.list_blobs(prefix=f"{task_id}/")
+                    for blob in blobs:
+                        filename = os.path.basename(blob.name)
+                        if filename:
+                            content = blob.download_as_bytes()
+                            zip_file.writestr(filename, content)
+                            files_added = True
             except Exception as e:
-                logger.error("Failed to read files from S3 for ZIP: %s", e)
+                logger.error("Failed to read files from GCS for ZIP: %s", e)
 
         if not files_added:
             # Local fallback

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Editor from "@monaco-editor/react"
-import { useNexusStore } from "../../store/agentStore"
+import { useNexusStore, safeGet } from "../../store/agentStore"
 
 const WELCOME_CONTENT = `# ⬡ NexusSwarm — Hierarchical Multi-Agent Orchestration
 
@@ -139,10 +139,10 @@ export function EditorArea({ style }: Props) {
       if (fname === "Dockerfile") return "dockerfile"
       return "plaintext"
     }
-    return AGENT_LANG[activeTab] ?? AGENT_LANG.default
+    return safeGet(AGENT_LANG, activeTab) ?? AGENT_LANG.default
   }
 
-  const getLabel = (agent: string) => AGENT_LABEL[agent] ?? AGENT_LABEL.default
+  const getLabel = (agent: string) => safeGet(AGENT_LABEL, agent) ?? AGENT_LABEL.default
 
   return (
     <div style={{ display:"flex", flexDirection:"column", overflow:"hidden", ...style }}>

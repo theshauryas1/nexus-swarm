@@ -71,10 +71,21 @@ interface NexusStore {
   files:          { name: string; size: number; lang: string }[]
   selectedFile:   string | null
   selectedFileContent: string | null
+  recentTasks:    { task_id: string; title: string; status: string; created_at: string }[]
+  expandedSessions: Record<string, { name: string; size: number; lang: string }[]>
+
+  // Page Router
+  currentPage: 'intro' | 'login' | 'ide'
+  user: { name: string; email: string; picture: string } | null
+  navigate: (page: 'intro' | 'login' | 'ide') => void
+  setUser: (user: { name: string; email: string; picture: string } | null) => void
 
   // Actions
   fetchFiles:         () => Promise<void>
   selectFile:         (filename: string) => Promise<void>
+  selectSessionFile:  (taskId: string, filename: string) => Promise<void>
+  fetchRecentTasks:   () => Promise<void>
+  fetchSessionFiles:  (taskId: string) => Promise<void>
   setConnected:       (v: boolean) => void
   setApiError:        (message: string | null) => void
   setTaskId:          (id: string, title: string) => void
@@ -85,6 +96,8 @@ interface NexusStore {
 }
 
 export const useNexusStore = create<NexusStore>((set) => ({
+  currentPage:    (new URLSearchParams(window.location.search).get('page') as any) || 'intro',
+  user:           localStorage.getItem('nexus_user') ? JSON.parse(localStorage.getItem('nexus_user')!) : null,
   connected:      false,
   taskId:         null,
   taskTitle:      null,
@@ -99,9 +112,80 @@ export const useNexusStore = create<NexusStore>((set) => ({
   files:          [],
   selectedFile:   null,
   selectedFileContent: null,
+  recentTasks:    [],
+  expandedSessions: {},
+
+  navigate: (page) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('page', page);
+    window.history.pushState({}, '', `?${params.toString()}`);
+    set({ currentPage: page });
+  },
+
+  setUser: (user) => {
+    if (user) {
+      localStorage.setItem('nexus_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('nexus_user');
+    }
+    set({ user });
+  },
 
   setConnected: (v) => set({ connected: v }),
   setApiError: (message) => set({ apiError: message }),
+
+  fetchRecentTasks: async () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    try {
+      const res = await fetch(`${apiUrl}/tasks?limit=30`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.tasks) {
+        set({ recentTasks: data.tasks })
+      }
+    } catch (e) {
+      console.error("Failed to fetch recent tasks", e)
+    }
+  },
+
+  fetchSessionFiles: async (taskId: string) => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    try {
+      const res = await fetch(`${apiUrl}/files/${taskId}`)
+      if (!res.ok) return
+      const files = await res.json()
+      set((state) => ({
+        expandedSessions: {
+          ...state.expandedSessions,
+          [taskId]: files
+        }
+      }))
+    } catch (e) {
+      console.error(`Failed to fetch files for task ${taskId}`, e)
+    }
+  },
+
+  selectSessionFile: async (taskId: string, filename: string) => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    try {
+      const res = await fetch(`${apiUrl}/files/${taskId}/${filename}`)
+      if (!res.ok) {
+        set({ apiError: await getApiErrorMessage(res) })
+        return
+      }
+      const data = await res.json()
+      const task = useNexusStore.getState().recentTasks.find(t => t.task_id === taskId)
+      set({ 
+        taskId, 
+        taskTitle: task?.title ?? "Session", 
+        selectedFile: filename, 
+        selectedFileContent: data.content, 
+        apiError: null 
+      })
+    } catch (e) {
+      set({ apiError: "Could not load file content. Check the backend connection." })
+    }
+  },
 
   fetchFiles: async () => {
     const taskId = useNexusStore.getState().taskId
@@ -114,7 +198,14 @@ export const useNexusStore = create<NexusStore>((set) => ({
         return
       }
       const files = await res.json()
-      set({ files, apiError: null })
+      set((state) => ({
+        files,
+        expandedSessions: {
+          ...state.expandedSessions,
+          [taskId]: files
+        },
+        apiError: null
+      }))
     } catch (e) {
       set({ apiError: "Could not load generated files. Check the backend connection." })
     }
@@ -137,7 +228,7 @@ export const useNexusStore = create<NexusStore>((set) => ({
     }
   },
 
-  setTaskId: (id, title) =>
+  setTaskId: (id, title) => {
     set({
       taskId:         id,
       taskTitle:      title,
@@ -151,7 +242,9 @@ export const useNexusStore = create<NexusStore>((set) => ({
       files:          [],
       selectedFile:   null,
       selectedFileContent: null,
-    }),
+    })
+    useNexusStore.getState().fetchRecentTasks()
+  },
 
   clearTask: () =>
     set({
@@ -173,7 +266,7 @@ export const useNexusStore = create<NexusStore>((set) => ({
     set((state) => {
       const pName = pipeline as PipelineName
       if (!PIPELINES.includes(pName)) return state
-      const current = state.pipelines[pName]
+      const current = safeGet(state.pipelines, pName)
       const newStatus =
         status === 'done'   ? 'done'    :
         status === 'active' ? 'active'  :
@@ -209,7 +302,7 @@ export const useNexusStore = create<NexusStore>((set) => ({
       let pipelines = { ...state.pipelines }
       if (event.pipeline && PIPELINES.includes(event.pipeline as PipelineName)) {
         const p = event.pipeline as PipelineName
-        const current = pipelines[p]
+        const current = safeGet(pipelines, p)
         let newStatus = current.status
         let newProgress = current.progress
 
@@ -263,6 +356,7 @@ export const useNexusStore = create<NexusStore>((set) => ({
         
         setTimeout(() => {
           useNexusStore.getState().fetchFiles()
+          useNexusStore.getState().fetchRecentTasks()
         }, 500)
 
         return { events, agentStatuses, pipelines, taskRunning, outputItems }
@@ -278,3 +372,13 @@ export const useNexusStore = create<NexusStore>((set) => ({
     })
   },
 }))
+
+/**
+ * Safely look up a property on an object without risk of Prototype Pollution or security warnings.
+ */
+export function safeGet<T extends object, K extends string>(obj: T, key: K): any {
+  if (!obj || !key || key === '__proto__' || key === 'constructor' || key === 'prototype') {
+    return undefined;
+  }
+  return Object.prototype.hasOwnProperty.call(obj, key) ? Reflect.get(obj, key) : undefined;
+}

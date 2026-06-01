@@ -15,7 +15,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import clsx from 'clsx'
-import { useNexusStore } from '../store/agentStore'
+import { useNexusStore, safeGet } from '../store/agentStore'
 import type { AgentStatus } from '../types'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -137,8 +137,8 @@ interface AgentNodeData extends Record<string, unknown> {
 // ─────────────────────────────────────────────────────────────────────────────
 function AgentNode({ data }: NodeProps) {
   const { label, level, status, model, domain, isNew, tooltip } = data as AgentNodeData
-  const cfg = STATUS_CFG[status] ?? STATUS_CFG.idle
-  const theme = DOMAIN_THEME[domain]
+  const cfg = safeGet(STATUS_CFG, status) ?? STATUS_CFG.idle
+  const theme = safeGet(DOMAIN_THEME, domain)
   const bgClass = level === 'worker' || level === 'gateway' ? theme.workerBg : theme.managerBg
   const isActive = status === 'in_progress'
 
@@ -238,7 +238,7 @@ function AgentNode({ data }: NodeProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 function GatewayNode({ data }: NodeProps) {
   const { label, status, tooltip } = data as AgentNodeData
-  const cfg = STATUS_CFG[status] ?? STATUS_CFG.idle
+  const cfg = safeGet(STATUS_CFG, status) ?? STATUS_CFG.idle
   const isActive = status === 'in_progress'
 
   return (
@@ -605,7 +605,7 @@ function makeEdge(
     crosscutting: { active: '#a855f7', idle: '#2d1a3a' },
   }
 
-  const col = COLORS[style]
+  const col = safeGet(COLORS, style)
   const strokeColor = active ? col.active : col.idle
   const width = active ? (style === 'gateway' ? 3 : 2.5) : 1.5
   const filter = active ? `drop-shadow(0 0 6px ${col.active}90)` : 'none'
@@ -651,7 +651,7 @@ export function AgentGraph() {
           label:   id,
           level,
           domain,
-          status:  agentStatuses[id] ?? 'idle',
+          status:  safeGet(agentStatuses, id) ?? 'idle',
           model,
           isNew,
           tooltip,
@@ -664,7 +664,7 @@ export function AgentGraph() {
   const edges: Edge[] = useMemo(() => {
     const result: Edge[] = []
 
-    const isActive = (id: string) => (agentStatuses[id] ?? 'idle') === 'in_progress'
+    const isActive = (id: string) => (safeGet(agentStatuses, id) ?? 'idle') === 'in_progress'
 
     // Regular parent→child edges (excluding gateway which is handled manually)
     for (const { id, manager, domain } of NODE_LAYOUT) {

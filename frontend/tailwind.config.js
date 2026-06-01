@@ -4,6 +4,10 @@ export default {
   theme: {
     extend: {
       colors: {
+        'deep-space': '#030303',
+        'canvas-white': '#ffffff',
+        'system-gray': '#e5e7eb',
+        'terminal-green': '#73ffb9',
         brand: {
           50:  '#f0f0ff',
           100: '#e0e0ff',
@@ -23,8 +27,29 @@ export default {
         },
       },
       fontFamily: {
+        'pp-neue-montreal': ['PP Neue Montreal', 'Inter', 'system-ui', 'sans-serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+      },
+      borderRadius: {
+        lg: '8.64px',
+        full: '9999px',
+      },
+      spacing: {
+        'spacing-4': '4px',
+        'spacing-8': '8px',
+        'spacing-12': '12px',
+        'spacing-16': '16px',
+        'spacing-20': '20px',
+        'spacing-28': '28px',
+        'spacing-32': '32px',
+        'spacing-36': '36px',
+        'spacing-40': '40px',
+        'spacing-48': '48px',
+        'spacing-56': '56px',
+        'spacing-60': '60px',
+        'spacing-80': '80px',
+        'spacing-112': '112px',
       },
       animation: {
         'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',

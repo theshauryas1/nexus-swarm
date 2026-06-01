@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import { X, Download, CheckCircle2, FileText, Loader2, RefreshCw } from 'lucide-react'
 import clsx from 'clsx'
+import { safeGet } from '../store/agentStore'
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -252,7 +253,7 @@ export function DeliveryReport({ taskId, onClose }: Props) {
                   key={p.name}
                   className={clsx(
                     'flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[9px] font-bold uppercase',
-                    PIPELINE_COLORS[p.name] ?? 'text-slate-400 bg-surface-600 border-surface-500',
+                    safeGet(PIPELINE_COLORS, p.name) ?? 'text-slate-400 bg-surface-600 border-surface-500',
                   )}
                 >
                   <span>{p.name}</span>
@@ -276,7 +277,7 @@ export function DeliveryReport({ taskId, onClose }: Props) {
                   : 'border-transparent text-slate-500 hover:text-slate-300',
               )}
             >
-              {t === 'summary' ? '📊 Summary' : `${AGENT_ICON[t] ?? '📄'} ${t}`}
+              {t === 'summary' ? '📊 Summary' : `${safeGet(AGENT_ICON, t) ?? '📄'} ${t}`}
             </button>
           ))}
         </div>
@@ -376,7 +377,7 @@ export function DeliveryReport({ taskId, onClose }: Props) {
                         className="text-left px-3 py-2.5 bg-surface-700 hover:bg-surface-600 rounded-xl border border-surface-500 hover:border-brand-500/40 transition-all group"
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-base">{AGENT_ICON[o.agent] ?? '📄'}</span>
+                          <span className="text-base">{safeGet(AGENT_ICON, o.agent) ?? '📄'}</span>
                           <span className="text-xs font-semibold text-white group-hover:text-brand-300 transition-colors">{o.agent}</span>
                         </div>
                         <div className="text-[9px] text-slate-600 font-mono line-clamp-2 leading-relaxed">
@@ -398,7 +399,7 @@ export function DeliveryReport({ taskId, onClose }: Props) {
               return (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 pb-2 border-b border-surface-600">
-                    <span className="text-xl">{AGENT_ICON[output.agent] ?? '📄'}</span>
+                    <span className="text-xl">{safeGet(AGENT_ICON, output.agent) ?? '📄'}</span>
                     <h4 className="text-sm font-bold text-white">{output.agent}</h4>
                     <span className="ml-auto text-[9px] text-slate-600 font-mono">{output.content.length} chars</span>
                   </div>

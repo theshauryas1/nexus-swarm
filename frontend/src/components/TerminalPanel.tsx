@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Terminal, ChevronRight, X } from 'lucide-react'
 import clsx from 'clsx'
-import { useNexusStore } from '../store/agentStore'
+import { useNexusStore, safeGet } from '../store/agentStore'
 
 const LEVEL_COLOR: Record<string, string> = {
   orchestrator: 'text-violet-400',
@@ -160,12 +160,12 @@ export function TerminalPanel() {
                 </span>
 
                 {/* Status symbol */}
-                <span className={clsx('flex-shrink-0', STATUS_COLOR[ev.status] ?? 'text-slate-500')}>
-                  {STATUS_PREFIX[ev.status] ?? '○'}
+                <span className={clsx('flex-shrink-0', safeGet(STATUS_COLOR, ev.status) ?? 'text-slate-500')}>
+                  {safeGet(STATUS_PREFIX, ev.status) ?? '○'}
                 </span>
 
                 {/* Agent name */}
-                <span className={clsx('flex-shrink-0', LEVEL_COLOR[ev.agent_level] ?? 'text-slate-400')}>
+                <span className={clsx('flex-shrink-0', safeGet(LEVEL_COLOR, ev.agent_level) ?? 'text-slate-400')}>
                   [{ev.agent_name}]
                 </span>
 
