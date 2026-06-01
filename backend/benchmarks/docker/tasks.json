@@ -1,0 +1,86 @@
+[
+  {
+    "name": "Docker Multi-stage FastAPI",
+    "title": "Optimize Python FastAPI Dockerfile",
+    "description": "Write a multi-stage Dockerfile for a FastAPI application. Use a build stage to install dependencies and a slim final stage. Ensure the app runs as a non-root user and does not include dev tools.",
+    "category": "docker",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Docker Compose Full Stack",
+    "title": "Docker Compose for FastAPI + PostgreSQL + Redis",
+    "description": "Create a docker-compose.yml that orchestrates a FastAPI backend, PostgreSQL database, and Redis cache. Configure health checks, volume mounts for persistence, and a shared network.",
+    "category": "docker",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Docker Non-Root Security",
+    "title": "Secure Docker Image with Non-Root User",
+    "description": "Harden a Python Docker image by creating a dedicated non-root user, dropping Linux capabilities, setting read-only filesystem where possible, and removing package manager caches.",
+    "category": "docker",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Docker Build Cache Optimization",
+    "title": "Optimize Docker Build Cache Layers",
+    "description": "Refactor a Dockerfile to optimize layer caching. Ensure requirements.txt is copied and installed before source code is copied, so code changes don't invalidate the dependency layer.",
+    "category": "docker",
+    "difficulty": "easy"
+  },
+  {
+    "name": "Docker Image Scan",
+    "title": "Automated Docker Image Vulnerability Scan",
+    "description": "Create a CI step using Trivy or Grype to scan a built Docker image for known CVEs. Fail the pipeline if any CRITICAL or HIGH severity vulnerabilities are found in the image.",
+    "category": "docker",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Docker Secrets Injection",
+    "title": "Docker Secrets for Sensitive Config",
+    "description": "Demonstrate how to inject secrets into a Docker container using Docker Secrets (not environment variables in docker-compose). Show reading the secret from /run/secrets/ at runtime.",
+    "category": "docker",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Docker Health Check",
+    "title": "Dockerfile HEALTHCHECK Instruction",
+    "description": "Add a HEALTHCHECK instruction to a Dockerfile that periodically calls the /health endpoint of a FastAPI application and restarts the container if health checks fail consecutively.",
+    "category": "docker",
+    "difficulty": "easy"
+  },
+  {
+    "name": "Docker Entrypoint Script",
+    "title": "Docker Entrypoint with DB Migration",
+    "description": "Create a Docker entrypoint shell script that waits for PostgreSQL to be ready, runs Alembic database migrations, and then starts the FastAPI application with Uvicorn.",
+    "category": "docker",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Docker Base Image Strategy",
+    "title": "Select Optimal Docker Base Image",
+    "description": "Compare python:3.12-slim, python:3.12-alpine, and python:3.12-distroless for a FastAPI app. Explain the trade-offs in image size, security surface, and compatibility. Provide a Dockerfile for the best choice.",
+    "category": "docker",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Docker Compose Scaling",
+    "title": "Horizontal Scaling with Docker Compose",
+    "description": "Configure docker-compose.yml to scale a FastAPI backend to 3 replicas behind an Nginx load balancer. Ensure session state is externalized to Redis so any replica can serve requests.",
+    "category": "docker",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Docker Logdriver Config",
+    "title": "Centralized Logging with Docker Log Drivers",
+    "description": "Configure Docker to route application logs to a centralized logging system (e.g., Loki or an ELK stack) using a Docker log driver. Include log format, rotation, and max-size settings.",
+    "category": "docker",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Docker Signal Handling",
+    "title": "Graceful Shutdown with SIGTERM Handling",
+    "description": "Configure a FastAPI application in Docker to handle SIGTERM gracefully. Ensure in-flight requests are completed and the application closes database connections before exiting.",
+    "category": "docker",
+    "difficulty": "medium"
+  }
+]

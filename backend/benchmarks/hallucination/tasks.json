@@ -1,0 +1,110 @@
+[
+  {
+    "name": "JWTAuth Hallucination Trap",
+    "title": "Build Auth System Using FastAPI Security",
+    "description": "Create a FastAPI authentication system using JWT. Use standard libraries only. Do NOT use JWTAuth from fastapi.security (it does not exist). Use OAuth2PasswordBearer and python-jose or pyjwt instead.",
+    "category": "hallucination",
+    "difficulty": "medium",
+    "known_trap": "from fastapi.security import JWTAuth",
+    "correct_pattern": "from fastapi.security import OAuth2PasswordBearer"
+  },
+  {
+    "name": "Flask-CORS Trap",
+    "title": "Add CORS to FastAPI (Not Flask)",
+    "description": "Add CORS support to a FastAPI application. Use the correct FastAPI approach with CORSMiddleware from fastapi.middleware.cors. Do NOT use the Flask-CORS library (flask_cors) which is incompatible with FastAPI.",
+    "category": "hallucination",
+    "difficulty": "easy",
+    "known_trap": "from flask_cors import CORS",
+    "correct_pattern": "from fastapi.middleware.cors import CORSMiddleware"
+  },
+  {
+    "name": "SQLAlchemy Async Session Trap",
+    "title": "Use Async SQLAlchemy Correctly",
+    "description": "Set up async database access in FastAPI with SQLAlchemy. Use create_async_engine from sqlalchemy.ext.asyncio. Do NOT use Session directly (synchronous); use AsyncSession with async_sessionmaker.",
+    "category": "hallucination",
+    "difficulty": "hard",
+    "known_trap": "from sqlalchemy.orm import Session (used in async context)",
+    "correct_pattern": "from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine"
+  },
+  {
+    "name": "Pydantic V1 V2 Trap",
+    "title": "Correct Pydantic V2 Field Validators",
+    "description": "Create Pydantic V2 models with field validators. Use the @field_validator decorator (not the V1 @validator). Do NOT use @validator which is deprecated in Pydantic V2 and will raise import errors.",
+    "category": "hallucination",
+    "difficulty": "medium",
+    "known_trap": "from pydantic import validator",
+    "correct_pattern": "from pydantic import field_validator"
+  },
+  {
+    "name": "aiohttp ClientSession Trap",
+    "title": "Make Async HTTP Requests with aiohttp",
+    "description": "Use aiohttp to make async HTTP requests inside a FastAPI endpoint. Always use the session inside an 'async with' context manager. Do NOT instantiate aiohttp.ClientSession() without closing it - this causes resource leaks and DeprecationWarning.",
+    "category": "hallucination",
+    "difficulty": "medium",
+    "known_trap": "session = aiohttp.ClientSession() (never closed)",
+    "correct_pattern": "async with aiohttp.ClientSession() as session:"
+  },
+  {
+    "name": "Datetime UTC Trap",
+    "title": "Use Timezone-Aware Datetimes",
+    "description": "Store UTC timestamps in a PostgreSQL database. Use datetime.now(timezone.utc) instead of the deprecated datetime.utcnow(). The utcnow() method returns naive datetimes that cause comparison errors with timezone-aware DB fields.",
+    "category": "hallucination",
+    "difficulty": "easy",
+    "known_trap": "datetime.utcnow()",
+    "correct_pattern": "datetime.now(timezone.utc)"
+  },
+  {
+    "name": "FastAPI TestClient Async Trap",
+    "title": "Test Async FastAPI Endpoints Correctly",
+    "description": "Write tests for async FastAPI endpoints. Use httpx.AsyncClient with the ASGI transport adapter. Do NOT use TestClient from starlette.testclient directly for endpoints with actual async DB operations (causes event loop conflicts).",
+    "category": "hallucination",
+    "difficulty": "hard",
+    "known_trap": "from starlette.testclient import TestClient (for async tests)",
+    "correct_pattern": "import httpx; async with httpx.AsyncClient(app=app, base_url='http://test') as client:"
+  },
+  {
+    "name": "Bcrypt Import Trap",
+    "title": "Hash Passwords with bcrypt Correctly",
+    "description": "Hash user passwords in a FastAPI registration endpoint. Use the passlib library with the bcrypt scheme. Do NOT call bcrypt.hashpw directly from the 'bcrypt' package with str input (requires bytes). Use passlib.context.CryptContext for safer abstraction.",
+    "category": "hallucination",
+    "difficulty": "easy",
+    "known_trap": "bcrypt.hashpw(password_str, salt)  # TypeError: str not allowed",
+    "correct_pattern": "from passlib.context import CryptContext; pwd_context = CryptContext(schemes=['bcrypt'])"
+  },
+  {
+    "name": "Redis Async Library Trap",
+    "title": "Use Async Redis Correctly with aioredis vs redis.asyncio",
+    "description": "Connect to Redis asynchronously in FastAPI. Use redis.asyncio (from the redis package) not the deprecated aioredis package. The aioredis library has been merged into redis-py and importing standalone aioredis will fail.",
+    "category": "hallucination",
+    "difficulty": "medium",
+    "known_trap": "import aioredis",
+    "correct_pattern": "from redis.asyncio import Redis"
+  },
+  {
+    "name": "Celery Result Backend Trap",
+    "title": "Configure Celery with Redis Backend",
+    "description": "Set up a Celery worker with Redis as both broker and result backend. Use redis:// URLs (not amqp://). Do NOT use Celery's 'CELERY_BROKER_URL' (old-style config) - use the new lowercase 'broker_url' and 'result_backend' config keys.",
+    "category": "hallucination",
+    "difficulty": "medium",
+    "known_trap": "CELERY_BROKER_URL = 'redis://...'",
+    "correct_pattern": "app.conf.update(broker_url='redis://...', result_backend='redis://...')"
+  },
+  {
+    "name": "Starlette Request Body Trap",
+    "title": "Read Request Body in FastAPI Middleware",
+    "description": "Read the request body inside a FastAPI middleware. You CANNOT use await request.body() more than once without re-setting the body, as it's a consumed stream. Use a workaround to cache the body bytes.",
+    "category": "hallucination",
+    "difficulty": "hard",
+    "known_trap": "await request.body() called twice in middleware (second call returns empty bytes)",
+    "correct_pattern": "body = await request.body(); request._body = body  # cache it"
+  },
+  {
+    "name": "asyncpg vs psycopg2 Trap",
+    "title": "Use asyncpg for Async PostgreSQL",
+    "description": "Set up async PostgreSQL access in Python. Use asyncpg (not psycopg2 which is synchronous). Connect using await asyncpg.connect() and use $1, $2 placeholders (not %s). Do NOT import psycopg2 in async code paths.",
+    "category": "hallucination",
+    "difficulty": "medium",
+    "known_trap": "import psycopg2; psycopg2.connect() in async function",
+    "correct_pattern": "import asyncpg; conn = await asyncpg.connect(dsn)"
+  }
+]

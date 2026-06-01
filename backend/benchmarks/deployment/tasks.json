@@ -1,0 +1,86 @@
+[
+  {
+    "name": "Kubernetes Liveness Probes",
+    "title": "Kubernetes Liveness and Readiness Probes",
+    "description": "Create standard Kubernetes deployment YAML configurations including livenessProbe (HTTP GET /healthz), readinessProbe (HTTP GET /ready), resource requests and limits, and a securityContext running as non-root.",
+    "category": "deployment",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Kubernetes Horizontal Scaling",
+    "title": "Kubernetes HorizontalPodAutoscaler",
+    "description": "Create a HorizontalPodAutoscaler manifest for a FastAPI deployment. Scale between 2 and 10 replicas based on CPU utilization (target 70%) and custom Prometheus metrics (requests per second).",
+    "category": "deployment",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Cloud Run Deployment",
+    "title": "Google Cloud Run Service Configuration",
+    "description": "Create a Cloud Run service configuration in YAML. Set memory to 512Mi, CPU to 1, min-instances to 1, max-instances to 10, concurrency to 80, and configure secrets from Secret Manager as environment variables.",
+    "category": "deployment",
+    "difficulty": "medium"
+  },
+  {
+    "name": "GitHub Actions CI/CD",
+    "title": "GitHub Actions Deploy to Cloud Run",
+    "description": "Create a GitHub Actions workflow that: builds a Docker image, pushes to Google Artifact Registry, and deploys to Cloud Run on push to main. Use Workload Identity Federation (not service account keys).",
+    "category": "deployment",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Alembic Migration Setup",
+    "title": "Database Migration with Alembic",
+    "description": "Create an Alembic migration setup for a FastAPI project. Configure env.py to use async SQLAlchemy, write a migration that creates a users table with UUID primary key, email unique index, and created_at timestamp.",
+    "category": "deployment",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Nginx Reverse Proxy",
+    "title": "Nginx Reverse Proxy for FastAPI",
+    "description": "Configure Nginx as a reverse proxy for a FastAPI application. Enable gzip compression, configure rate limiting per IP, set proper proxy headers (X-Forwarded-For, X-Real-IP), and configure SSL termination.",
+    "category": "deployment",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Terraform GCP Cloud Run",
+    "title": "Terraform Module for Cloud Run Service",
+    "description": "Write Terraform configuration to deploy a containerized FastAPI application to Google Cloud Run. Include VPC connector, secret references, IAM service account bindings, and Cloud SQL connection.",
+    "category": "deployment",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Zero-Downtime Deploy",
+    "title": "Zero-Downtime Blue-Green Deployment",
+    "description": "Implement a blue-green deployment strategy for a FastAPI service on Cloud Run. Use traffic splitting (100%/0% → 50%/50% → 0%/100%) with automated smoke tests between each stage.",
+    "category": "deployment",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Kubernetes ConfigMap Secrets",
+    "title": "Kubernetes ConfigMap and Secret Management",
+    "description": "Create Kubernetes ConfigMap for non-sensitive app configuration and Secret for sensitive values. Mount them as environment variables in a deployment. Demonstrate how to rotate secrets without restarting pods.",
+    "category": "deployment",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Pre-Deploy Smoke Test",
+    "title": "Automated Deployment Smoke Tests",
+    "description": "Create a post-deployment smoke test script in Python. Hit key API endpoints, verify responses, check database connectivity, and page the on-call engineer via webhook if any checks fail within 2 minutes.",
+    "category": "deployment",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Vault Config Loader",
+    "title": "Secure Vault Configuration Loader",
+    "description": "Write a Python startup utility that authenticates against HashiCorp Vault via AppRole and loads secret keys into application environment variables on startup. Cache secrets with a 5-minute refresh interval.",
+    "category": "deployment",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Rollback Automation",
+    "title": "Automated Deployment Rollback",
+    "description": "Create a shell/Python script that monitors deployment health metrics (error rate, latency p99) after a deploy. If thresholds are breached within 5 minutes, automatically roll back to the previous revision.",
+    "category": "deployment",
+    "difficulty": "hard"
+  }
+]

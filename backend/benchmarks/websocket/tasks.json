@@ -1,0 +1,86 @@
+[
+  {
+    "name": "WebSocket Chat Broadcast",
+    "title": "FastAPI WebSocket Chat Server",
+    "description": "Create a WebSocket chat server in FastAPI. Allow multiple clients to connect, send messages, and broadcast those messages to all other connected clients in real time. Handle disconnection gracefully.",
+    "category": "websocket",
+    "difficulty": "medium"
+  },
+  {
+    "name": "WebSocket Rooms",
+    "title": "WebSocket Chat with Named Rooms",
+    "description": "Extend a WebSocket chat server to support named rooms. Clients should be able to join a specific room, and messages should only be broadcast to clients in the same room.",
+    "category": "websocket",
+    "difficulty": "medium"
+  },
+  {
+    "name": "WebSocket Auth JWT",
+    "title": "Authenticated WebSocket Connection",
+    "description": "Implement JWT-based authentication for a WebSocket endpoint in FastAPI. Validate the token passed in the connection query string or header before accepting the WebSocket handshake.",
+    "category": "websocket",
+    "difficulty": "medium"
+  },
+  {
+    "name": "WebSocket Pub Sub Redis",
+    "title": "Redis PubSub WebSocket Server",
+    "description": "Build a WebSocket server that uses Redis Pub/Sub to allow multiple server instances to broadcast messages to all clients across servers. Implement a channel subscription pattern.",
+    "category": "websocket",
+    "difficulty": "hard"
+  },
+  {
+    "name": "WebSocket Heartbeat",
+    "title": "WebSocket Heartbeat and Keep-Alive",
+    "description": "Implement a heartbeat mechanism for a WebSocket server. Send periodic ping frames to detect stale connections and close them after a configurable timeout. Track connection health metrics.",
+    "category": "websocket",
+    "difficulty": "medium"
+  },
+  {
+    "name": "WebSocket Rate Limiter",
+    "title": "Rate-Limited WebSocket Endpoint",
+    "description": "Add per-connection rate limiting to a WebSocket handler in FastAPI. Track message counts per client over a sliding window of 10 seconds. Close the connection if the rate limit is exceeded.",
+    "category": "websocket",
+    "difficulty": "medium"
+  },
+  {
+    "name": "WebSocket Multiplexer",
+    "title": "WebSocket Event Type Multiplexer",
+    "description": "Create a WebSocket server that dispatches different message types using an event multiplexer pattern. Clients send JSON with an 'event' field, and the server routes handling to the correct function.",
+    "category": "websocket",
+    "difficulty": "medium"
+  },
+  {
+    "name": "WebSocket Progress Stream",
+    "title": "Stream Long-Running Task Progress via WebSocket",
+    "description": "Implement a system where a client submits a long-running task via HTTP and receives real-time progress updates via WebSocket. The server pushes percentage progress until completion.",
+    "category": "websocket",
+    "difficulty": "hard"
+  },
+  {
+    "name": "WebSocket Reconnect Logic",
+    "title": "Client-Side WebSocket Reconnection",
+    "description": "Implement a robust WebSocket client in JavaScript with exponential backoff reconnection logic. Handle connection errors, server-side disconnects, and network interruptions gracefully.",
+    "category": "websocket",
+    "difficulty": "medium"
+  },
+  {
+    "name": "WebSocket Presence Tracker",
+    "title": "WebSocket User Presence Tracking",
+    "description": "Build a presence tracking system using WebSockets. Maintain a list of active users per room, broadcast join/leave events, and expose an HTTP endpoint to query current online users.",
+    "category": "websocket",
+    "difficulty": "medium"
+  },
+  {
+    "name": "WebSocket Binary Transfer",
+    "title": "WebSocket Binary File Streaming",
+    "description": "Implement a WebSocket endpoint that accepts binary data from clients and streams it as chunks to a storage backend. Handle large file transfers with proper buffering and progress reporting.",
+    "category": "websocket",
+    "difficulty": "hard"
+  },
+  {
+    "name": "WebSocket Load Test",
+    "title": "WebSocket Load Test Script",
+    "description": "Write a Python asyncio script that simulates 100 concurrent WebSocket clients connecting to a server, sending messages at 1-second intervals, and validating broadcast delivery. Report metrics.",
+    "category": "websocket",
+    "difficulty": "hard"
+  }
+]

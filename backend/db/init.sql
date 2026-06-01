@@ -149,6 +149,10 @@ CREATE TABLE IF NOT EXISTS benchmark_results (
     pass                    BOOLEAN NOT NULL DEFAULT FALSE,
     score                   DOUBLE PRECISION,
     execution_time          DOUBLE PRECISION,
+    repair_iterations       INTEGER DEFAULT 0,
+    failure_reason          TEXT,
+    root_cause              TEXT,
+    recovery_success        BOOLEAN,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

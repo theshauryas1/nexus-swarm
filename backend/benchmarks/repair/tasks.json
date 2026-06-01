@@ -1,0 +1,119 @@
+[
+  {
+    "name": "Broken Schema Fix",
+    "title": "Fix Mismatched Pydantic Schema",
+    "description": "Given a broken FastAPI endpoint where the response model has a field 'user_name' but the SQLAlchemy model has 'username', diagnose the validation error and fix the schema mismatch. Write tests to verify.",
+    "category": "repair",
+    "difficulty": "easy",
+    "inject_fault": true,
+    "fault_type": "schema_mismatch"
+  },
+  {
+    "name": "Missing DB Connection Pool",
+    "title": "Fix Missing Connection Pool Configuration",
+    "description": "Given a FastAPI app with raw SQLite connections (not pooled), refactor it to use SQLAlchemy connection pooling. Fix the 'too many open files' error under concurrent load. Add pool_size=10, max_overflow=20.",
+    "category": "repair",
+    "difficulty": "medium",
+    "inject_fault": true,
+    "fault_type": "resource_leak"
+  },
+  {
+    "name": "Async Event Loop Error",
+    "title": "Fix RuntimeError: Event Loop Already Running",
+    "description": "Given code that calls asyncio.run() inside an async context, fix the RuntimeError: 'This event loop is already running.' Refactor to use asyncio.create_task() or await directly.",
+    "category": "repair",
+    "difficulty": "medium",
+    "inject_fault": true,
+    "fault_type": "async_misuse"
+  },
+  {
+    "name": "N+1 Query Repair",
+    "title": "Fix N+1 Database Query Problem",
+    "description": "Given a FastAPI endpoint that loads a list of orders and then iterates to fetch each user separately (N+1), fix it using SQLAlchemy joinedload or selectinload to batch the user fetches into a single query.",
+    "category": "repair",
+    "difficulty": "medium",
+    "inject_fault": true,
+    "fault_type": "performance"
+  },
+  {
+    "name": "Circular Import Fix",
+    "title": "Resolve Python Circular Import Error",
+    "description": "Given a FastAPI project with circular imports between models.py and schemas.py, fix the ImportError. Refactor using TYPE_CHECKING guards, late imports, or module restructuring.",
+    "category": "repair",
+    "difficulty": "medium",
+    "inject_fault": true,
+    "fault_type": "import_error"
+  },
+  {
+    "name": "Broken Alembic Migration",
+    "title": "Fix Broken Alembic Migration",
+    "description": "Given a failed Alembic migration that errors with 'column already exists', write a repair migration that checks for the column's existence before adding it. Add proper rollback logic in the downgrade function.",
+    "category": "repair",
+    "difficulty": "medium",
+    "inject_fault": true,
+    "fault_type": "migration_failure"
+  },
+  {
+    "name": "Memory Leak Fix",
+    "title": "Fix Memory Leak in Background Task",
+    "description": "Given a FastAPI background task that accumulates results in a global dictionary and never cleans up, diagnose the memory leak and fix it. Add TTL-based eviction and bounded cache size using LRU.",
+    "category": "repair",
+    "difficulty": "hard",
+    "inject_fault": true,
+    "fault_type": "memory_leak"
+  },
+  {
+    "name": "Race Condition Fix",
+    "title": "Fix Race Condition in Async Counter",
+    "description": "Given an async Python endpoint that increments a shared counter without locking (race condition under load), fix it using asyncio.Lock() or atomic Redis INCR. Write a concurrent test to verify correctness.",
+    "category": "repair",
+    "difficulty": "hard",
+    "inject_fault": true,
+    "fault_type": "race_condition"
+  },
+  {
+    "name": "Broken Requirements Fix",
+    "title": "Fix Incompatible requirements.txt",
+    "description": "Given a requirements.txt with conflicting version pins (e.g., pydantic==1.9 and fastapi==0.100 which requires pydantic>=2.0), resolve the conflicts. Upgrade or downgrade packages to a mutually compatible set.",
+    "category": "repair",
+    "difficulty": "medium",
+    "inject_fault": true,
+    "fault_type": "dependency_conflict"
+  },
+  {
+    "name": "Missing Await Fix",
+    "title": "Fix Missing Await in Async Function",
+    "description": "Given a FastAPI endpoint that calls async database functions without await (returning coroutine objects instead of results), identify all missing awaits and fix them. Add type annotations to prevent recurrence.",
+    "category": "repair",
+    "difficulty": "easy",
+    "inject_fault": true,
+    "fault_type": "missing_await"
+  },
+  {
+    "name": "CORS Preflight Failure",
+    "title": "Fix CORS Preflight Request Failures",
+    "description": "Given a FastAPI API receiving CORS preflight errors from a frontend on a different port, diagnose and fix the CORS configuration. Handle credentials, allowed methods, and exposed headers correctly.",
+    "category": "repair",
+    "difficulty": "easy",
+    "inject_fault": true,
+    "fault_type": "config_error"
+  },
+  {
+    "name": "Broken Pagination Fix",
+    "title": "Fix Off-By-One Error in Pagination",
+    "description": "Given a pagination implementation that returns n+1 items on the last page or skips the first item on subsequent pages, identify and fix the off-by-one error. Write parameterized tests for all edge cases.",
+    "category": "repair",
+    "difficulty": "medium",
+    "inject_fault": true,
+    "fault_type": "logic_error"
+  },
+  {
+    "name": "Deadlock Resolution",
+    "title": "Resolve Database Deadlock",
+    "description": "Given a PostgreSQL scenario with two transactions that deadlock when updating rows in opposite order, refactor the code to acquire locks in a consistent order. Add error handling for deadlock retry.",
+    "category": "repair",
+    "difficulty": "hard",
+    "inject_fault": true,
+    "fault_type": "deadlock"
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "name": "JWT User Auth",
+    "title": "FastAPI User Authentication with JWT",
+    "description": "Create a secure user registration and login system in FastAPI. Use bcrypt for password hashing and pyjwt for issuing JSON Web Tokens. Guard a protected endpoint /users/me with Bearer JWT authentication.",
+    "category": "auth",
+    "difficulty": "medium"
+  },
+  {
+    "name": "JWT Refresh Token",
+    "title": "Implement JWT Refresh Tokens",
+    "description": "Design a token refresh flow. Store secure, HTTP-only refresh tokens in cookies with expiration, and allow clients to exchange them for short-lived access tokens via /auth/refresh. Invalidate old refresh tokens on use.",
+    "category": "auth",
+    "difficulty": "hard"
+  },
+  {
+    "name": "JWT Blacklist Redis",
+    "title": "Revoke JWTs via Redis Blacklist",
+    "description": "Implement a logout endpoint in FastAPI. Blacklist the user's active JWT in Redis for the remainder of its TTL, and reject requests using blacklisted tokens in a dependency function.",
+    "category": "auth",
+    "difficulty": "medium"
+  },
+  {
+    "name": "OAuth2 Discord Login",
+    "title": "Discord OAuth2 Authorization Flow",
+    "description": "Implement the complete authorization code grant flow for logging in users via Discord. Handle the redirect URL, code exchange for access token, and fetch the user's Discord profile details.",
+    "category": "auth",
+    "difficulty": "hard"
+  },
+  {
+    "name": "OAuth2 GitHub Login",
+    "title": "GitHub OAuth2 Authorization Flow",
+    "description": "Implement OAuth2 login with GitHub. Generate the authorization URL, handle the callback with the code, exchange for an access token, retrieve the user's GitHub profile, and create/update a user record in the database.",
+    "category": "auth",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Role-Based Access Control",
+    "title": "FastAPI RBAC Middleware",
+    "description": "Implement Role-Based Access Control (RBAC) in FastAPI. Define ADMIN, EDITOR, and VIEWER roles. Enforce role checks using dependency injection on protected routes. Return 403 for insufficient permissions.",
+    "category": "auth",
+    "difficulty": "medium"
+  },
+  {
+    "name": "API Key Auth",
+    "title": "API Key Authentication System",
+    "description": "Create a system for API key-based authentication. Generate hashed API keys on user request, store the hash in PostgreSQL, and validate incoming API keys from the X-API-Key header for each protected endpoint.",
+    "category": "auth",
+    "difficulty": "medium"
+  },
+  {
+    "name": "MFA TOTP",
+    "title": "Time-based OTP (TOTP) Multi-Factor Authentication",
+    "description": "Implement TOTP-based MFA using pyotp. Generate a TOTP secret and QR code URL during setup, store the secret encrypted in the database, and verify TOTP codes on login. Support backup codes.",
+    "category": "auth",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Session Auth Cookies",
+    "title": "Server-Side Session Authentication",
+    "description": "Implement server-side session authentication using httponly, secure, and SameSite=Strict cookies. Store session data in Redis with a 24-hour TTL. Implement session invalidation on logout.",
+    "category": "auth",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Password Strength Validator",
+    "title": "Password Strength Policy Enforcer",
+    "description": "Create a password validator function in Python. Enforce complex password rules (minimum 12 characters, uppercase, lowercase, digit, special character) and return descriptive validation error messages.",
+    "category": "auth",
+    "difficulty": "easy"
+  },
+  {
+    "name": "Email Verification Flow",
+    "title": "Email Verification on Registration",
+    "description": "Implement an email verification flow: generate a short-lived signed token on registration, send a verification link via email, and provide an endpoint to verify the token and activate the account.",
+    "category": "auth",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Password Reset Flow",
+    "title": "Secure Password Reset Endpoint",
+    "description": "Create a secure password reset system. Generate a time-limited token hashed in the database, send a reset link to the user's email, verify the token, and update the password using bcrypt.",
+    "category": "auth",
+    "difficulty": "medium"
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "name": "SQL Injection Hardening",
+    "title": "Prevent SQL Injection with Parameterized Queries",
+    "description": "Given a search input, implement a secure SQL query search endpoint in Python using parameterized queries to prevent SQL injection vulnerabilities. Never use string formatting or concatenation in SQL queries.",
+    "category": "security",
+    "difficulty": "medium"
+  },
+  {
+    "name": "XSS Prevention",
+    "title": "Cross-Site Scripting (XSS) Prevention",
+    "description": "Implement a content submission endpoint that sanitizes user-supplied HTML using the Bleach library. Configure an allowlist of safe tags and attributes. Return sanitized content and demonstrate rejection of script tags.",
+    "category": "security",
+    "difficulty": "medium"
+  },
+  {
+    "name": "CSRF Protection",
+    "title": "CSRF Token Protection for Form Endpoints",
+    "description": "Implement CSRF protection for form-based endpoints in FastAPI. Generate per-session CSRF tokens, validate the token on POST requests, and reject requests with missing or invalid tokens.",
+    "category": "security",
+    "difficulty": "medium"
+  },
+  {
+    "name": "AES-GCM Encryption",
+    "title": "Encrypt PII Database Columns with AES-GCM",
+    "description": "Implement a Python class to encrypt and decrypt sensitive fields (like SSN and phone number) before saving them to a database. Use AES-GCM (256-bit) encryption via the cryptography library.",
+    "category": "security",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Security Headers Middleware",
+    "title": "HTTP Security Headers Middleware",
+    "description": "Add a FastAPI middleware that sets OWASP-recommended HTTP security headers: Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy.",
+    "category": "security",
+    "difficulty": "easy"
+  },
+  {
+    "name": "File Upload Validation",
+    "title": "Secure File Upload with MIME Validation",
+    "description": "Create a FastAPI endpoint /upload that accepts files, validates the MIME type by reading magic bytes (not just extension), restricts to JPEG/PNG/PDF under 10MB, and scans using ClamAV before storing.",
+    "category": "security",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Dependency Audit Script",
+    "title": "Python Dependency Vulnerability Audit",
+    "description": "Write a Python script that reads requirements.txt, calls the PyPI JSON API for each package, and checks if there are known vulnerabilities reported in the OSV database. Output a formatted report.",
+    "category": "security",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Secrets Scanner",
+    "title": "Secrets Leak Detection Script",
+    "description": "Create a pre-commit hook script in Python that scans staged files for leaked secrets (AWS access keys, private keys, .env patterns, API key patterns) using regex patterns. Fail the commit if any are found.",
+    "category": "security",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Input Sanitization API",
+    "title": "Comprehensive Input Sanitization Layer",
+    "description": "Implement a Pydantic-based input sanitization layer that strips null bytes, limits string lengths, rejects non-UTF8 inputs, and normalizes Unicode NFC. Apply it as a FastAPI middleware.",
+    "category": "security",
+    "difficulty": "medium"
+  },
+  {
+    "name": "IP Allowlist Middleware",
+    "title": "IP Allowlist Enforcement Middleware",
+    "description": "Create a FastAPI middleware that enforces an IP allowlist for admin endpoints. Read the allowed CIDR ranges from configuration, support IPv4 and IPv6, and return 403 for requests from unlisted IPs.",
+    "category": "security",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Audit Log System",
+    "title": "Immutable Security Audit Log",
+    "description": "Design an audit logging system for a FastAPI application. Log all state-changing operations (create, update, delete) with user ID, timestamp, action type, entity type, and old/new values. Make the log append-only.",
+    "category": "security",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Error Sanitization",
+    "title": "Sanitize API Error Responses",
+    "description": "Implement a global exception handler in FastAPI that catches unhandled exceptions and returns sanitized error responses, never leaking stack traces, internal paths, or database errors to clients.",
+    "category": "security",
+    "difficulty": "easy"
+  }
+]

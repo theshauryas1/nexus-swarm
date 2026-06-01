@@ -399,6 +399,8 @@ export function AgentTreePanel({ activePanel }: Props) {
       setTimeout(() => setRunning(false), 5000)
     }
 
+    const [expandedId, setExpandedId] = React.useState<number | null>(null)
+
     if (!leaderboardData) {
       return (
         <div style={{ padding: 12, fontSize: 12, color: "#858585" }}>
@@ -409,45 +411,104 @@ export function AgentTreePanel({ activePanel }: Props) {
 
     const { stats, benchmarks } = leaderboardData
 
+    const getScoreColor = (score: number) => {
+      if (score >= 8.0) return "#4ec94e"
+      if (score >= 6.0) return "#f5a623"
+      return "#f44747"
+    }
+
+    const getRootCauseLabel = (rootCause: string | null | undefined) => {
+      if (!rootCause) return null
+      const labels: Record<string, string> = {
+        "test_failure_repaired": "🔧 Test Failure → Repaired",
+        "security_block": "⛔ Security Block",
+        "pipeline_failure": "💥 Pipeline Failure",
+        "unhandled_exception": "❌ Unhandled Exception",
+        "schema_mismatch": "🔄 Schema Mismatch",
+        "resource_leak": "📈 Resource Leak",
+        "async_misuse": "⚡ Async Misuse",
+        "performance": "🐌 N+1 / Perf",
+        "import_error": "📦 Import Error",
+        "migration_failure": "🗄️ Migration Failure",
+        "memory_leak": "💾 Memory Leak",
+        "race_condition": "🏎️ Race Condition",
+        "dependency_conflict": "⚠️ Dep Conflict",
+        "missing_await": "🕐 Missing Await",
+        "config_error": "⚙️ Config Error",
+        "logic_error": "🧮 Logic Error",
+        "deadlock": "🔒 Deadlock",
+      }
+      return labels[rootCause] || rootCause
+    }
+
+    // Extract category from benchmark name like "[category] name"
+    const getBenchmarkCategory = (name: string) => {
+      const match = name.match(/^\[(\w+)\]/)
+      return match ? match[1].toUpperCase() : null
+    }
+
+    const categoryColors: Record<string, string> = {
+      "BACKEND": "#6fb3f2",
+      "AUTH": "#c678dd",
+      "WEBSOCKET": "#56b6c2",
+      "DOCKER": "#61afef",
+      "SECURITY": "#e06c75",
+      "REPAIR": "#e5c07b",
+      "HALLUCINATION": "#ff79c6",
+      "DEPLOYMENT": "#98c379",
+    }
+
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-        {/* Stats Grid */}
+        {/* Stats Grid - 6 cards */}
         <div style={{
           padding: "10px 12px",
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 8,
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: 6,
           borderBottom: "1px solid #3c3c3c",
           background: "#161616",
           flexShrink: 0,
         }}>
-          <div style={{ background: "#1e1e1e", padding: 8, borderRadius: 4, border: "1px solid #2d2d2d" }}>
-            <div style={{ fontSize: 9, color: "#858585" }}>SUCCESS RATE</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#4ec94e" }}>
+          <div style={{ background: "#1e1e1e", padding: 7, borderRadius: 4, border: "1px solid #2d2d2d" }}>
+            <div style={{ fontSize: 8, color: "#858585", marginBottom: 2 }}>SUCCESS RATE</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#4ec94e" }}>
               {stats.success_rate ? `${stats.success_rate.toFixed(1)}%` : "0.0%"}
             </div>
           </div>
-          <div style={{ background: "#1e1e1e", padding: 8, borderRadius: 4, border: "1px solid #2d2d2d" }}>
-            <div style={{ fontSize: 9, color: "#858585" }}>AVG SCORE</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#6fb3f2" }}>
+          <div style={{ background: "#1e1e1e", padding: 7, borderRadius: 4, border: "1px solid #2d2d2d" }}>
+            <div style={{ fontSize: 8, color: "#858585", marginBottom: 2 }}>AVG SCORE</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#6fb3f2" }}>
               {stats.avg_score ? `${stats.avg_score.toFixed(2)}/10` : "0.0/10"}
             </div>
           </div>
-          <div style={{ background: "#1e1e1e", padding: 8, borderRadius: 4, border: "1px solid #2d2d2d" }}>
-            <div style={{ fontSize: 9, color: "#858585" }}>SECURITY PASS</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#e5e7eb" }}>
+          <div style={{ background: "#1e1e1e", padding: 7, borderRadius: 4, border: "1px solid #2d2d2d" }}>
+            <div style={{ fontSize: 8, color: "#858585", marginBottom: 2 }}>TOTAL RUNS</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#e5e7eb" }}>
+              {stats.total_benchmarks ?? 0}
+            </div>
+          </div>
+          <div style={{ background: "#1e1e1e", padding: 7, borderRadius: 4, border: "1px solid #2d2d2d" }}>
+            <div style={{ fontSize: 8, color: "#858585", marginBottom: 2 }}>SECURITY PASS</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#e06c75" }}>
               {stats.security_pass_rate ? `${stats.security_pass_rate.toFixed(1)}%` : "98.0%"}
             </div>
           </div>
-          <div style={{ background: "#1e1e1e", padding: 8, borderRadius: 4, border: "1px solid #2d2d2d" }}>
-            <div style={{ fontSize: 9, color: "#858585" }}>AUTO-REPAIR</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#e5e7eb" }}>
+          <div style={{ background: "#1e1e1e", padding: 7, borderRadius: 4, border: "1px solid #2d2d2d" }}>
+            <div style={{ fontSize: 8, color: "#858585", marginBottom: 2 }}>AUTO-REPAIR</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#e5c07b" }}>
               {stats.repair_success_rate ? `${stats.repair_success_rate.toFixed(1)}%` : "89.0%"}
+            </div>
+          </div>
+          <div style={{ background: "#1e1e1e", padding: 7, borderRadius: 4, border: "1px solid #2d2d2d" }}>
+            <div style={{ fontSize: 8, color: "#858585", marginBottom: 2 }}>HALLUC. CHECK</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#ff79c6" }}>
+              {stats.hallucination_pass_rate != null ? `${stats.hallucination_pass_rate.toFixed(1)}%` : "—"}
             </div>
           </div>
         </div>
 
-        {/* Trigger Button */}
+        {/* Run Controls */}
         <div style={{ padding: "8px 12px", display: "flex", gap: 6, alignItems: "center", borderBottom: "1px solid #3c3c3c", flexShrink: 0 }}>
           <button
             onClick={handleRun}
@@ -465,7 +526,7 @@ export function AgentTreePanel({ activePanel }: Props) {
               transition: "background 0.2s",
             }}
           >
-            {running ? "⚡ Executing Suite..." : "🏆 Run Benchmarks"}
+            {running ? "⚡ Executing 100-Task Suite..." : "🏆 Run 100 Benchmarks"}
           </button>
           <button
             onClick={() => fetchLeaderboard()}
@@ -490,40 +551,126 @@ export function AgentTreePanel({ activePanel }: Props) {
               No benchmark runs recorded. Run a suite to see results!
             </div>
           ) : (
-            benchmarks.map(b => (
-              <div
-                key={b.id}
-                onClick={() => b.task_id && setTaskId(b.task_id, b.task_title || b.benchmark_name)}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  padding: "8px 12px",
-                  borderBottom: "1px solid #1f1f1f",
-                  cursor: b.task_id ? "pointer" : "default",
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={e => { if (b.task_id) e.currentTarget.style.background = "#2a2d2e" }}
-                onMouseLeave={e => { if (b.task_id) e.currentTarget.style.background = "transparent" }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: "#e5e7eb" }}>{b.benchmark_name}</span>
-                  <span style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    padding: "2px 5px",
-                    borderRadius: 3,
-                    background: b.pass ? "rgba(78, 201, 78, 0.15)" : "rgba(244, 71, 71, 0.15)",
-                    color: b.pass ? "#4ec94e" : "#f44747",
-                  }}>
-                    {b.pass ? "PASS" : "FAIL"}
-                  </span>
+            benchmarks.map(b => {
+              const category = getBenchmarkCategory(b.benchmark_name)
+              const categoryColor = category ? (categoryColors[category] || "#6fb3f2") : "#6fb3f2"
+              const isExpanded = expandedId === b.id
+              const hasDetails = b.failure_reason || b.root_cause || (b.repair_iterations && b.repair_iterations > 0)
+
+              return (
+                <div
+                  key={b.id}
+                  style={{
+                    borderBottom: "1px solid #1f1f1f",
+                  }}
+                >
+                  {/* Main row */}
+                  <div
+                    onClick={() => {
+                      if (hasDetails) setExpandedId(isExpanded ? null : b.id)
+                      else if (b.task_id) setTaskId(b.task_id, b.task_title || b.benchmark_name)
+                    }}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      padding: "7px 12px",
+                      cursor: hasDetails || b.task_id ? "pointer" : "default",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "#2a2d2e" }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent" }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
+                        {/* Category tag */}
+                        {category && (
+                          <span style={{
+                            fontSize: 8, fontWeight: 700, padding: "1px 4px",
+                            borderRadius: 2, background: `${categoryColor}22`,
+                            color: categoryColor, flexShrink: 0,
+                          }}>
+                            {category}
+                          </span>
+                        )}
+                        <span style={{ fontSize: 11, fontWeight: 500, color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {b.benchmark_name.replace(/^\[\w+\]\s*/, "")}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                        {/* Repair badge */}
+                        {b.repair_iterations != null && b.repair_iterations > 0 && (
+                          <span style={{
+                            fontSize: 8, fontWeight: 700, padding: "1px 4px",
+                            borderRadius: 2, background: "rgba(229, 192, 123, 0.15)",
+                            color: "#e5c07b",
+                          }}>
+                            🔧 ×{b.repair_iterations}
+                          </span>
+                        )}
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, padding: "2px 5px", borderRadius: 3,
+                          background: b.pass ? "rgba(78, 201, 78, 0.15)" : "rgba(244, 71, 71, 0.15)",
+                          color: b.pass ? "#4ec94e" : "#f44747",
+                        }}>
+                          {b.pass ? "PASS" : "FAIL"}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#858585" }}>
+                      <span>Score: <strong style={{ color: getScoreColor(b.score) }}>{b.score.toFixed(1)}/10</strong></span>
+                      <span>{b.execution_time.toFixed(1)}s {hasDetails ? (isExpanded ? "▲" : "▼") : ""}</span>
+                    </div>
+                  </div>
+
+                  {/* Expanded details */}
+                  {isExpanded && hasDetails && (
+                    <div style={{
+                      margin: "0 12px 8px",
+                      background: "#1a1a1a",
+                      border: "1px solid #2d2d2d",
+                      borderRadius: 4,
+                      padding: 8,
+                      fontSize: 10,
+                    }}>
+                      {b.root_cause && (
+                        <div style={{ marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ color: "#858585", flexShrink: 0 }}>Root Cause:</span>
+                          <span style={{ color: "#e5c07b", fontWeight: 600 }}>
+                            {getRootCauseLabel(b.root_cause)}
+                          </span>
+                        </div>
+                      )}
+                      {b.failure_reason && (
+                        <div style={{ marginBottom: 4 }}>
+                          <span style={{ color: "#858585" }}>Reason: </span>
+                          <span style={{ color: "#f44747" }}>{b.failure_reason}</span>
+                        </div>
+                      )}
+                      {b.recovery_success != null && (
+                        <div style={{ marginBottom: 4 }}>
+                          <span style={{ color: "#858585" }}>Recovery: </span>
+                          <span style={{ color: b.recovery_success ? "#4ec94e" : "#f44747", fontWeight: 600 }}>
+                            {b.recovery_success ? "✅ Successful" : "❌ Failed"}
+                          </span>
+                        </div>
+                      )}
+                      {b.task_id && (
+                        <button
+                          onClick={() => setTaskId(b.task_id!, b.task_title || b.benchmark_name)}
+                          style={{
+                            marginTop: 4, background: "#2d2d2d", border: "1px solid #3c3c3c",
+                            color: "#6fb3f2", padding: "3px 8px", borderRadius: 3,
+                            fontSize: 10, cursor: "pointer",
+                          }}
+                        >
+                          Open Task →
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#858585" }}>
-                  <span>Score: <strong style={{ color: b.pass ? "#4ec94e" : "#f5a623" }}>{b.score.toFixed(1)}/10</strong></span>
-                  <span>{b.execution_time.toFixed(1)}s</span>
-                </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>

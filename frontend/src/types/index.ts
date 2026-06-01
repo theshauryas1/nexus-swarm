@@ -72,6 +72,7 @@ export interface BenchmarkStats {
   avg_score: number
   repair_success_rate: number
   security_pass_rate: number
+  hallucination_pass_rate?: number
 }
 
 export interface BenchmarkResult {
@@ -84,6 +85,11 @@ export interface BenchmarkResult {
   created_at: string
   task_title?: string | null
   task_status?: string | null
+  // Recovery metrics (v2)
+  repair_iterations?: number
+  failure_reason?: string | null
+  root_cause?: string | null
+  recovery_success?: boolean | null
 }
 
 export interface LeaderboardData {

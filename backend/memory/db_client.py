@@ -651,6 +651,10 @@ class BenchmarkDB:
         pass_status: bool,
         score: float,
         execution_time: float,
+        repair_iterations: int = 0,
+        failure_reason: str | None = None,
+        root_cause: str | None = None,
+        recovery_success: bool | None = None,
     ) -> int:
         if _use_mock_db:
             bench_id = len(_MOCK_BENCHMARKS) + 1
@@ -661,6 +665,10 @@ class BenchmarkDB:
                 "pass": pass_status,
                 "score": score,
                 "execution_time": execution_time,
+                "repair_iterations": repair_iterations,
+                "failure_reason": failure_reason,
+                "root_cause": root_cause,
+                "recovery_success": recovery_success,
                 "created_at": datetime.now()
             })
             return bench_id
@@ -668,9 +676,11 @@ class BenchmarkDB:
         result = await self.session.execute(
             text("""
                 INSERT INTO benchmark_results (
-                    benchmark_name, task_id, pass, score, execution_time
+                    benchmark_name, task_id, pass, score, execution_time,
+                    repair_iterations, failure_reason, root_cause, recovery_success
                 ) VALUES (
-                    :benchmark_name, :task_id, :pass_status, :score, :execution_time
+                    :benchmark_name, :task_id, :pass_status, :score, :execution_time,
+                    :repair_iterations, :failure_reason, :root_cause, :recovery_success
                 ) RETURNING id
             """),
             {
@@ -679,6 +689,10 @@ class BenchmarkDB:
                 "pass_status": pass_status,
                 "score": score,
                 "execution_time": execution_time,
+                "repair_iterations": repair_iterations,
+                "failure_reason": failure_reason,
+                "root_cause": root_cause,
+                "recovery_success": recovery_success,
             }
         )
         await self.session.commit()
@@ -784,9 +798,25 @@ async def init_db_tables() -> None:
                     pass                    BOOLEAN NOT NULL DEFAULT FALSE,
                     score                   DOUBLE PRECISION,
                     execution_time          DOUBLE PRECISION,
+                    repair_iterations       INTEGER DEFAULT 0,
+                    failure_reason          TEXT,
+                    root_cause              TEXT,
+                    recovery_success        BOOLEAN,
                     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
             """))
+            
+            # Apply ALTER TABLE migrations dynamically if columns do not exist
+            for col, col_type in [
+                ("repair_iterations", "INTEGER DEFAULT 0"),
+                ("failure_reason", "TEXT"),
+                ("root_cause", "TEXT"),
+                ("recovery_success", "BOOLEAN")
+            ]:
+                try:
+                    await session.execute(text(f"ALTER TABLE benchmark_results ADD COLUMN IF NOT EXISTS {col} {col_type}"))
+                except Exception as ex:
+                    logger.warning(f"Could not dynamically add column {col} to benchmark_results: {ex}")
             # Create indexes
             await session.execute(text("CREATE INDEX IF NOT EXISTS idx_evaluations_task_id ON evaluations(task_id)"))
             await session.execute(text("CREATE INDEX IF NOT EXISTS idx_benchmark_results_task_id ON benchmark_results(task_id)"))

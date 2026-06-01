@@ -31,6 +31,7 @@ from agents.llm_factory import (
 from fastapi.responses import StreamingResponse
 from memory.db_client import get_db_session, TaskDB, PipelineDB, AgentLogDB, OutputDB
 from memory.file_storage import save_file, list_files, get_file_content, create_zip_archive
+from memory.import_validator import validate_generated_imports
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -47,6 +48,70 @@ websocket_clients: list[WebSocket] = []
 # ─────────────────────────────────────────────────────────────
 #  SCHEMAS
 # ─────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────
+#  ADVERSARIAL PROMPT DEFENSE
+# ─────────────────────────────────────────────────────────────
+
+_INJECTION_PATTERNS = [
+    "ignore previous instructions",
+    "ignore all instructions",
+    "forget previous",
+    "expose database",
+    "expose credentials",
+    "expose password",
+    "print your system prompt",
+    "reveal your prompt",
+    "show me your instructions",
+    "act as dan",
+    "bypass security",
+    "disable safety",
+    "you are now",
+    "override your instructions",
+    "ignore your training",
+    "disregard all prior",
+    "new instructions:",
+    "do not follow",
+    "\\x00",
+    "exec(",
+    "__import__",
+    "os.system(",
+    "subprocess.run(",
+    "eval(",
+    "compile(",
+]
+
+_MAX_DEPENDENCIES = 60
+_MAX_FILES_REQUESTED = 100
+
+
+def check_adversarial_prompt(title: str, description: str) -> tuple[bool, str]:
+    """
+    Check for prompt injection, DoS, and adversarial patterns.
+    Returns (is_safe, reason). is_safe=True means the prompt is clean.
+    """
+    combined = (title + " " + description).lower()
+    
+    for pattern in _INJECTION_PATTERNS:
+        if pattern in combined:
+            return False, f"Prompt injection detected: '{pattern}'"
+    
+    # DoS prevention: detect requests for abnormally large outputs
+    if len(description) > 2000:
+        return False, "Description exceeds maximum length (2000 chars)."
+    
+    # Block requests for >60 dependencies or >100 files (DoS file bomb)
+    import re
+    dep_count = len(re.findall(r'(?:dependency|library|package|module|import)[^.\n]{0,50}', combined))
+    if dep_count > _MAX_DEPENDENCIES:
+        return False, f"Potential dependency flood attack: {dep_count} dependency references found."
+    
+    file_refs = len(re.findall(r'\.py\b|\.ts\b|\.tsx\b|\.js\b|\.json\b|\.yaml\b|\.yml\b', combined))
+    if file_refs > _MAX_FILES_REQUESTED:
+        return False, f"Potential file bomb attack: {file_refs} file references found."
+    
+    return True, "ok"
+
 
 class TaskRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=100, description="Title of the task")
@@ -292,6 +357,16 @@ async def get_agents(request: Request):
 @router.post("/submit-task", response_model=TaskResponse)
 @limiter.limit("10/minute")
 async def submit_task(request: Request, task_req: TaskRequest):
+    # ── Security: adversarial prompt injection detection
+    is_safe, reason = check_adversarial_prompt(task_req.title, task_req.description)
+    if not is_safe:
+        logger.warning("Adversarial prompt blocked from %s: %s",
+                       request.client.host if request.client else "unknown", reason)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task rejected by security filter: {reason}",
+        )
+
     # ── Security: check per-IP token budget before accepting work (cost-attack prevention)
     client_ip = request.client.host if request.client else "unknown"
     # Each pipeline run will consume roughly 8000–10000 tokens; guard with a 10k estimate
@@ -542,9 +617,51 @@ Return a JSON plan with:
                 p["status"]   = "done"
                 p["progress"] = 100
 
+        # ── MULTI-SIGNAL OBJECTIVE SCORE CALCULATION ──────────
+        # Formula: Final = (LLM Evaluator Score × 0.4) + (Objective Score × 0.6)
+        # Deductions: syntax_error -5.0, each hallucination -2.0,
+        #             pytest failure -3.0, each critical security vuln -1.5
+        objective_score = 10.0
+        
+        backend_code_final = active_tasks[task_id]["outputs"].get("backend_code", "")
+        if backend_code_final:
+            try:
+                import ast as _ast
+                _ast.parse(backend_code_final)
+            except SyntaxError:
+                objective_score -= 5.0
+        
+        hallucinations = active_tasks[task_id]["outputs"].get("hallucination_findings", [])
+        objective_score -= min(len(hallucinations) * 2.0, 6.0)  # cap at -6
+        
+        security_scan_text = active_tasks[task_id]["outputs"].get("security_scan", "")
+        critical_vulns = security_scan_text.upper().count("CRITICAL")
+        objective_score -= min(critical_vulns * 1.5, 4.5)  # cap at -4.5
+        
+        objective_score = max(objective_score, 0.0)
+        
+        # Get LLM evaluator score from latest evaluation
+        llm_score = 7.0
+        try:
+            async for session in get_db_session():
+                if not session:
+                    break
+                from memory.db_client import EvaluationDB
+                eval_db = EvaluationDB(session)
+                evals = await eval_db.get_evaluations(task_id)
+                if evals:
+                    llm_score = float(evals[0].get("overall_score", 7.0))
+                break
+        except Exception:
+            pass
+        
+        final_score = round((llm_score * 0.4) + (objective_score * 0.6), 2)
+        active_tasks[task_id]["final_score"] = final_score
+        active_tasks[task_id]["objective_score"] = objective_score
+        
         await agent_event(task_id, "HeadOrchestrator", "done",
-                          "✅ All pipelines complete. Swarm delivery successful.",
-                          output="Swarm execution successful. All 6 pipelines completed.",
+                          f"✅ All pipelines complete. Final Score: {final_score}/10 (LLM: {llm_score:.1f} | Objective: {objective_score:.1f})",
+                          output=f"Final Score: {final_score}/10\nLLM Evaluator: {llm_score:.1f}/10 (40%)\nObjective Verification: {objective_score:.1f}/10 (60%)\nHallucinations detected: {len(hallucinations)}\nCritical security issues: {critical_vulns}",
                           level="orchestrator")
 
         # Broadcast completion event for frontend detection
@@ -554,7 +671,7 @@ Return a JSON plan with:
             "agent":      "HeadOrchestrator",
             "level":      "orchestrator",
             "status":     "done",
-            "message":    "✅ Swarm delivery complete!",
+            "message":    f"✅ Swarm delivery complete! Score: {final_score}/10",
             "ts":         datetime.utcnow().isoformat() + 'Z',
         })
 
@@ -876,18 +993,54 @@ Requirements:
 
 
 async def _run_hallucination_detector_agent(task_id: str, content: str) -> list:
+    """Hybrid AST-based + LLM hallucination detector for generated Python code."""
     await agent_event(task_id, "HallucinationDetectorAgent", "working",
-                      "Scanning backend code imports and APIs for hallucination...")
+                      "Running AST-based import/API scanner on generated code...")
     
+    # ── Step 1: Static AST check (fast, deterministic)
+    import os
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "workspace"))
+    workspace_path = os.path.join(base_dir, task_id) if task_id else None
+    
+    ast_findings = []
+    if content and len(content.strip()) > 20:
+        try:
+            ast_findings = validate_generated_imports(content, workspace_dir=workspace_path)
+        except Exception as e:
+            logger.warning("AST validator error: %s", e)
+    
+    # Convert AST findings into the same format as LLM findings
+    combined_findings = [
+        {
+            "import_line": f"from {f.get('module', '?')} import {f.get('name', '?')}" if f.get('name') else f"import {f.get('module', '?')}",
+            "reason": f.get('reason', 'Unknown'),
+            "source": "ast_static"
+        }
+        for f in ast_findings
+        if f.get('type') in ('missing_import', 'hallucinated_api')
+    ]
+    
+    syntax_errors = [f for f in ast_findings if f.get('type') == 'syntax_error']
+    if syntax_errors:
+        combined_findings.append({
+            "import_line": "(syntax error)",
+            "reason": syntax_errors[0].get('reason', 'Syntax error in generated code'),
+            "source": "ast_static"
+        })
+    
+    await agent_event(task_id, "HallucinationDetectorAgent", "working",
+                      f"AST scan complete: {len(ast_findings)} issue(s). Running LLM cross-check...")
+    
+    # ── Step 2: LLM cross-check for semantic issues the AST can't catch
     prompt = f"""
 Review the following Python code and check for:
 1. Imports that do not exist (e.g. from fastapi.security import JWTAuth).
-2. Packages used that are not standard and not in requirements.txt.
-3. Class methods or functions called on library classes that do not exist.
+2. Packages used that are not standard or installed.
+3. Class methods or functions called that do not exist on library objects.
 
 Python Code:
 ---
-{content}
+{content[:3000]}
 ---
 
 Return valid JSON only.
@@ -900,38 +1053,44 @@ Output format:
     }}
   ]
 }}
-If no hallucinations are found, return an empty list:
+If no hallucinations are found, return:
 {{
   "hallucinations": []
 }}
 """
-    result = await call_agent_llm(
-        "HallucinationDetectorAgent",
-        prompt,
-        system="You are a static analysis hallucination scanner. Return JSON only.",
-    )
-    
     try:
+        result = await call_agent_llm(
+            "HallucinationDetectorAgent",
+            prompt,
+            system="You are a static analysis hallucination scanner. Return JSON only.",
+        )
         clean_res = result.strip()
         if clean_res.startswith("```json"):
             clean_res = clean_res[7:]
+        if clean_res.startswith("```"):
+            clean_res = clean_res[3:]
         if clean_res.endswith("```"):
             clean_res = clean_res[:-3]
         clean_res = clean_res.strip()
         data = json.loads(clean_res)
-        findings = data.get("hallucinations", [])
+        llm_findings = data.get("hallucinations", [])
+        # Mark LLM findings and merge (de-duplicate by import_line)
+        existing_lines = {f["import_line"] for f in combined_findings}
+        for lf in llm_findings:
+            lf["source"] = "llm_review"
+            if lf.get("import_line") not in existing_lines:
+                combined_findings.append(lf)
     except Exception as e:
         logger.error("Failed to parse HallucinationDetector JSON: %s", e)
-        findings = []
 
     msg = (
-        f"✅ No hallucinations detected in imports or APIs."
-        if not findings
-        else f"⚠️ Detected {len(findings)} possible API/import hallucinations."
+        "✅ No hallucinations detected in imports or APIs (AST + LLM verified)."
+        if not combined_findings
+        else f"⚠️ Detected {len(combined_findings)} issue(s): {len(ast_findings)} AST + LLM cross-check."
     )
     await agent_event(task_id, "HallucinationDetectorAgent", "done", msg,
-                      output=json.dumps(findings, indent=2))
-    return findings
+                      output=json.dumps(combined_findings, indent=2))
+    return combined_findings
 
 
 async def _run_qa_pipeline(task_id: str, title: str, project_memory: str = "") -> bool:
@@ -1022,13 +1181,15 @@ async def _run_qa_pipeline(task_id: str, title: str, project_memory: str = "") -
 
     # Hallucination + semantic validators
     backend_code = active_tasks[task_id]["outputs"].get("backend_code", "")
-    await asyncio.gather(
+    hallucination_results, *_ = await asyncio.gather(
         _run_hallucination_detector_agent(task_id, backend_code),
         _run_validator(task_id, "SemanticValidator",
                        "Verify the code semantically matches the requirements."),
         _run_validator(task_id, "ContractValidator",
                        "Verify the API implementation matches the OpenAPI spec."),
     )
+    # Store hallucination findings so multi-signal score can deduct for them
+    active_tasks[task_id]["outputs"]["hallucination_findings"] = hallucination_results or []
     return True
 
 

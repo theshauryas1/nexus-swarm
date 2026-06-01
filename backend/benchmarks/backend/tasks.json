@@ -1,0 +1,107 @@
+[
+  {
+    "name": "FastAPI CRUD Basic",
+    "title": "Create a FastAPI Task Manager API",
+    "description": "Implement a Task Management backend in FastAPI. Include endpoints to create, read, update, and delete tasks. Use SQLAlchemy with an SQLite database. Tasks should have a title, description, completed status, and created_at timestamp.",
+    "category": "backend",
+    "difficulty": "easy"
+  },
+  {
+    "name": "Pagination Cursor",
+    "title": "API Endpoint with Cursor-Based Pagination",
+    "description": "Design an endpoint /posts that supports cursor-based pagination. Accept limit and starting_after query parameters, and return a list of items along with a next_cursor value.",
+    "category": "backend",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Rate Limiter Middleware",
+    "title": "Token Bucket Rate Limiter in FastAPI",
+    "description": "Implement a custom token-bucket rate limiter middleware in FastAPI using Redis to track client IP requests. Allow 10 requests per minute with a burst size of 20.",
+    "category": "backend",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Redis Cache API",
+    "title": "FastAPI API with Redis Caching",
+    "description": "Implement an API endpoint /products/{id} that fetches details from a database and uses Redis to cache the response. If the cache hits, return immediately. If it misses, fetch from DB and populate the cache with a 5-minute TTL.",
+    "category": "backend",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Gzip Middleware",
+    "title": "Gzip Compression Middleware",
+    "description": "Add Gzip compression middleware to FastAPI. Compress responses for requests that include Accept-Encoding: gzip, configuring a minimum threshold size for compression.",
+    "category": "backend",
+    "difficulty": "easy"
+  },
+  {
+    "name": "CSV Streaming Export",
+    "title": "Stream Large CSV Exports",
+    "description": "Create a FastAPI endpoint that queries a large dataset of sales transactions and streams the data back to the client as a CSV file to avoid loading millions of rows into memory.",
+    "category": "backend",
+    "difficulty": "medium"
+  },
+  {
+    "name": "API Versioning",
+    "title": "URL-Based API Versioning Strategy",
+    "description": "Implement URL-based API versioning in FastAPI (e.g. /api/v1/... and /api/v2/...). Structure routes and folders to maintain clean code and share models between versions.",
+    "category": "backend",
+    "difficulty": "medium"
+  },
+  {
+    "name": "CORS Middleware Secure",
+    "title": "Secure CORS Configuration",
+    "description": "Configure FastAPI CORS middleware to allow credentials and requests only from a specified list of trusted subdomains. Do not use wildcard origin policies (*).",
+    "category": "backend",
+    "difficulty": "easy"
+  },
+  {
+    "name": "Prometheus Metrics",
+    "title": "FastAPI Prometheus Instrumentation",
+    "description": "Instrument a FastAPI application with Prometheus metrics. Track HTTP request counts, latency histograms grouped by path and method, and expose a /metrics endpoint.",
+    "category": "backend",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Deep Health Check",
+    "title": "Deep Health Check Endpoint",
+    "description": "Implement a deep health check endpoint /healthz that verifies connections to PostgreSQL, Redis, and an external payment gateway API. Return HTTP 503 if any service is down.",
+    "category": "backend",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Request Audit Logger",
+    "title": "Structured API Request Logger",
+    "description": "Implement middleware in FastAPI that logs every HTTP request and response in JSON format. Include timestamp, path, method, status code, response time, and user ID if authenticated.",
+    "category": "backend",
+    "difficulty": "easy"
+  },
+  {
+    "name": "Slow Query Logger",
+    "title": "Log Slow Database Queries",
+    "description": "Configure SQLAlchemy event listeners to monitor database query execution times. Log a warning with the SQL query and duration if the query takes longer than 500ms.",
+    "category": "backend",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Webhook HMAC Dispatcher",
+    "title": "Webhook Dispatcher Service",
+    "description": "Build a webhook dispatching system in Python. Send POST payloads to user-defined URLs, signing the payload body using HMAC-SHA256 to allow recipients to verify authenticity.",
+    "category": "backend",
+    "difficulty": "medium"
+  },
+  {
+    "name": "Background Task Queue",
+    "title": "Celery Async Task Queue",
+    "description": "Configure a Celery task queue using Redis as the broker. Implement an asynchronous task to transcode an uploaded video file, updating task status in PostgreSQL.",
+    "category": "backend",
+    "difficulty": "hard"
+  },
+  {
+    "name": "Postgres Full-Text Search",
+    "title": "PostgreSQL Full-Text Search API",
+    "description": "Create an API endpoint utilizing PostgreSQL full-text search (tsvector and tsquery) to search through product titles and descriptions. Return results ranked by relevance score.",
+    "category": "backend",
+    "difficulty": "hard"
+  }
+]
