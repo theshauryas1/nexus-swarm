@@ -94,6 +94,10 @@ AGENT_MODEL_MAP: dict[str, str] = {
     "SemanticValidator":        LLAMA_8B,         # Validation
     "ContractValidator":        LLAMA_8B,         # Simple contract check
     "HumanApprovalGateway":     LLAMA_70B,        # Gateway needs strong reasoning
+    "EvaluatorAgent":           LLAMA_70B,        # Self-measurement loop
+    "CriticAgent":              LLAMA_70B,        # Self-measurement loop
+    "RefinerAgent":             LLAMA_70B,        # Self-measurement loop
+    "HallucinationDetectorAgent": LLAMA_8B,       # Static/dynamic import validation
 }
 
 

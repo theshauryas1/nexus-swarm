@@ -65,3 +65,29 @@ export interface OutputItem {
   file_path?:    string
   created_at:    string
 }
+
+export interface BenchmarkStats {
+  total_benchmarks: number
+  success_rate: number
+  avg_score: number
+  repair_success_rate: number
+  security_pass_rate: number
+}
+
+export interface BenchmarkResult {
+  id: number
+  benchmark_name: string
+  task_id: string | null
+  pass: boolean
+  score: number
+  execution_time: number
+  created_at: string
+  task_title?: string | null
+  task_status?: string | null
+}
+
+export interface LeaderboardData {
+  stats: BenchmarkStats
+  benchmarks: BenchmarkResult[]
+}
+

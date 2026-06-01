@@ -8,6 +8,7 @@ import type {
   AgentStatus,
   PipelineName,
   PipelineState,
+  LeaderboardData,
 } from '../types'
 
 // ── Pipeline defaults ─────────────────────────────────────────────
@@ -73,6 +74,7 @@ interface NexusStore {
   selectedFileContent: string | null
   recentTasks:    { task_id: string; title: string; status: string; created_at: string }[]
   expandedSessions: Record<string, { name: string; size: number; lang: string }[]>
+  leaderboardData: LeaderboardData | null
 
   // Page Router
   currentPage: 'intro' | 'login' | 'ide'
@@ -86,6 +88,8 @@ interface NexusStore {
   selectSessionFile:  (taskId: string, filename: string) => Promise<void>
   fetchRecentTasks:   () => Promise<void>
   fetchSessionFiles:  (taskId: string) => Promise<void>
+  fetchLeaderboard:   () => Promise<void>
+  runLeaderboard:     () => Promise<void>
   setConnected:       (v: boolean) => void
   setApiError:        (message: string | null) => void
   setTaskId:          (id: string, title: string) => void
@@ -114,6 +118,7 @@ export const useNexusStore = create<NexusStore>((set) => ({
   selectedFileContent: null,
   recentTasks:    [],
   expandedSessions: {},
+  leaderboardData: null,
 
   navigate: (page) => {
     const params = new URLSearchParams(window.location.search);
@@ -145,6 +150,31 @@ export const useNexusStore = create<NexusStore>((set) => ({
       }
     } catch (e) {
       console.error("Failed to fetch recent tasks", e)
+    }
+  },
+
+  fetchLeaderboard: async () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    try {
+      const res = await fetch(`${apiUrl}/stats/leaderboard`)
+      if (!res.ok) return
+      const data = await res.json()
+      set({ leaderboardData: data })
+    } catch (e) {
+      console.error("Failed to fetch leaderboard stats", e)
+    }
+  },
+
+  runLeaderboard: async () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    try {
+      const res = await fetch(`${apiUrl}/stats/leaderboard/run`, { method: 'POST' })
+      if (!res.ok) return
+      setTimeout(() => {
+        useNexusStore.getState().fetchLeaderboard()
+      }, 2000)
+    } catch (e) {
+      console.error("Failed to trigger benchmark run", e)
     }
   },
 

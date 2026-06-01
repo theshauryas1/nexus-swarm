@@ -8,7 +8,7 @@ import { StatusBar } from '../IDE/StatusBar';
 import { CommandPalette } from '../IDE/CommandPalette';
 import { useNexusStore, safeGet } from '../../store/agentStore';
 
-type Panel = 'agents' | 'files' | 'outputs' | 'pipelines';
+type Panel = 'agents' | 'files' | 'outputs' | 'pipelines' | 'leaderboard';
 
 function ResizeHandle({ onDrag }: { onDrag: (dx: number) => void }) {
   const startX = useRef<number | null>(null);

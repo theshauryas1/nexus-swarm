@@ -1,6 +1,6 @@
 // components/IDE/ActivityBar.tsx — VS Code left icon strip
 
-type Panel = "agents" | "files" | "outputs" | "pipelines"
+type Panel = "agents" | "files" | "outputs" | "pipelines" | "leaderboard"
 
 interface Props { active: Panel; onSelect: (p: Panel) => void }
 
@@ -9,6 +9,7 @@ const ITEMS: { id: Panel; icon: string; label: string }[] = [
   { id: "files",     icon: "🗂️", label: "Files"     },
   { id: "outputs",   icon: "📄",  label: "Outputs"   },
   { id: "pipelines", icon: "⚡",  label: "Pipelines" },
+  { id: "leaderboard", icon: "🏆", label: "Leaderboard" },
 ]
 
 export function ActivityBar({ active, onSelect }: Props) {

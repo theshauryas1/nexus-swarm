@@ -124,3 +124,34 @@ CREATE TRIGGER tasks_updated_at
 -- ─── SEED: Default pipeline names ───────────────────────────────
 -- (Just a reference comment — pipelines are created per-task at runtime)
 -- planning | engineering | qa | security | devops
+
+-- ─── EVALUATIONS ────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS evaluations (
+    id                      SERIAL PRIMARY KEY,
+    task_id                 UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    agent_name              TEXT NOT NULL,
+    accuracy_score          DOUBLE PRECISION,
+    completeness_score      DOUBLE PRECISION,
+    security_score          DOUBLE PRECISION,
+    maintainability_score   DOUBLE PRECISION,
+    scalability_score       DOUBLE PRECISION,
+    overall_score           DOUBLE PRECISION,
+    strengths               JSONB DEFAULT '[]',
+    weaknesses              JSONB DEFAULT '[]',
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ─── BENCHMARK RESULTS ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS benchmark_results (
+    id                      SERIAL PRIMARY KEY,
+    benchmark_name          TEXT NOT NULL,
+    task_id                 UUID REFERENCES tasks(id) ON DELETE SET NULL,
+    pass                    BOOLEAN NOT NULL DEFAULT FALSE,
+    score                   DOUBLE PRECISION,
+    execution_time          DOUBLE PRECISION,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_evaluations_task_id ON evaluations(task_id);
+CREATE INDEX IF NOT EXISTS idx_benchmark_results_task_id ON benchmark_results(task_id);
+

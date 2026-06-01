@@ -78,6 +78,8 @@ async def lifespan(app: FastAPI):
     db_ok = await ping_db()
     if db_ok:
         logger.info("✅ PostgreSQL ready")
+        from memory.db_client import init_db_tables
+        await init_db_tables()
     else:
         logger.warning("⚠️  PostgreSQL not reachable — check connection")
 
