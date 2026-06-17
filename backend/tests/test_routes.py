@@ -62,3 +62,48 @@ def test_submit_task_with_parent():
     # Cleanup
     if task_id in active_tasks:
         del active_tasks[task_id]
+
+
+def test_search_memory_endpoint():
+    from memory.db_client import _MOCK_MEMORIES
+    _MOCK_MEMORIES.clear()
+    _MOCK_MEMORIES.append({
+        "id": "mock-id-123",
+        "content": "Use Helmet in Express for secure headers.",
+        "embedding": [0.1] * 1024,
+        "memory_type": "security_standard",
+        "source_task_id": None,
+        "confidence_score": 1.0,
+        "access_count": 0,
+        "created_at": None,
+        "updated_at": None
+    })
+    
+    response = client.get("/memory/search?q=Helmet+headers")
+    assert response.status_code == 200
+    data = response.json()
+    assert "query" in data
+    assert len(data["results"]) > 0
+    assert data["results"][0]["content"] == "Use Helmet in Express for secure headers."
+
+def test_models_performance_endpoint():
+    response = client.get("/models/performance")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["provider"] == "NVIDIA NIM"
+    assert "metrics" in data
+
+def test_benchmark_endpoint():
+    payload = {
+        "task_type": "code_generation",
+        "requirements": {
+            "max_latency_ms": 1500,
+            "min_success_rate": 80.0
+        }
+    }
+    response = client.post("/models/benchmark", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["task_type"] == "code_generation"
+    assert "selected_model" in data
+

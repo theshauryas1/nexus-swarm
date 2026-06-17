@@ -13,6 +13,7 @@ import asyncio
 import html
 import json
 import logging
+import os
 import uuid
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Request, Query
@@ -35,6 +36,92 @@ from memory.import_validator import validate_generated_imports
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _ast_has_error(code: str) -> bool:
+    """Returns True if the code string has a syntax error."""
+    try:
+        import ast as _ast
+        _ast.parse(code)
+        return False
+    except SyntaxError:
+        return True
+
+
+import re as _re
+
+# Prose preamble patterns the LLM often emits before the actual code block
+_PROSE_PREAMBLE = _re.compile(
+    r'^(?:here(?:\'s| is)|below is|sure[,!]?|this is|i\'ve|i have|let me|note:|'
+    r'certainly[,!]?|of course[,!]?|absolutely[,!]?|following|output:|result:)'
+    r'[^\n]*\n*',
+    _re.IGNORECASE | _re.MULTILINE,
+)
+
+# Maps file extension → fence language tags we should strip
+_FENCE_LANGS: dict[str, list[str]] = {
+    ".py":   ["python", "py", "python3", ""],
+    ".yaml": ["yaml", "yml", ""],
+    ".yml":  ["yaml", "yml", ""],
+    ".json": ["json", ""],
+    ".ts":   ["typescript", "ts", "tsx", ""],
+    ".tsx":  ["typescript", "ts", "tsx", ""],
+    ".md":   [],        # keep as-is — markdown files may contain legitimate fences
+    "":      ["python", "yaml", "json", "typescript", "ts", ""],
+}
+
+
+def strip_llm_output(content: str, filename: str = "") -> str:
+    """
+    Strip markdown code fences and LLM preamble prose from agent output.
+
+    The LLM often returns:
+        Here's the code:
+        ```python
+        # actual code
+        ```
+        Let me know if you need changes.
+
+    This function extracts only the code inside the fence, or the raw
+    content if no fence is present.  Falls back to the full content if
+    stripping would produce an empty result (safety net).
+    """
+    if not content or not content.strip():
+        return content
+
+    # Only strip fences from code files, not plain-text docs
+    ext = ""
+    if filename:
+        _, ext = os.path.splitext(filename.lower())
+
+    # Never strip markdown files — they legitimately contain fences
+    if ext in (".md", ".rst", ".txt"):
+        return content
+
+    langs = _FENCE_LANGS.get(ext, _FENCE_LANGS[""])
+
+    # Build a regex matching any relevant fence tag
+    lang_alts = "|".join(_re.escape(l) for l in langs) if langs else ""
+    fence_pattern = (
+        _re.compile(
+            r'```(?:' + lang_alts + r')?\s*\n(.*?)```',
+            _re.DOTALL | _re.IGNORECASE,
+        )
+        if lang_alts else
+        _re.compile(r'```[^\n]*\n(.*?)```', _re.DOTALL)
+    )
+
+    matches = fence_pattern.findall(content)
+    if matches:
+        # Join multiple fenced blocks (e.g., conftest.py + test_backend.py)
+        stripped = "\n\n".join(m.rstrip() for m in matches if m.strip())
+        if stripped:
+            return stripped
+
+    # No fence found — strip prose preamble from the top only
+    cleaned = _PROSE_PREAMBLE.sub("", content.strip(), count=3)
+    return cleaned if cleaned.strip() else content
+
 
 
 # ─────────────────────────────────────────────────────────────
@@ -437,6 +524,8 @@ async def run_swarm_pipeline(task_id: str, title: str, description: str, parent_
     Full 7-pipeline swarm execution with real NIM calls.
     Each agent_event() call updates the React Flow graph live.
     """
+    from memory.cost_tracker import current_task_id
+    token = current_task_id.set(task_id)
     try:
         # Load parent session context if parent_task_id provided
         project_memory = ""
@@ -638,7 +727,33 @@ Return a JSON plan with:
         critical_vulns = security_scan_text.upper().count("CRITICAL")
         objective_score -= min(critical_vulns * 1.5, 4.5)  # cap at -4.5
         
+        # ── Pytest exit code signal ───────────────────────────────
+        pytest_exit_code = active_tasks[task_id]["outputs"].get("pytest_exit_code", None)
+        tests_patched = active_tasks[task_id]["outputs"].get("tests_patched", None)
+        if pytest_exit_code is not None and pytest_exit_code != 0 and not tests_patched:
+            objective_score -= 3.0  # Failed tests with no successful repair
+        
+        # ── Deployment validity signal ────────────────────────────
+        deployment_config = active_tasks[task_id]["outputs"].get("deployment_config", "")
+        if not deployment_config or "[DOCKERFILE_START]" not in deployment_config:
+            objective_score -= 1.0  # No valid Dockerfile generated
+        
+        # ── Repair penalty signal ─────────────────────────────────
+        repair_count = 1 if tests_patched else 0
+        objective_score -= repair_count * 0.5  # Quality debt per repair iteration
+        
         objective_score = max(objective_score, 0.0)
+        
+        # Store objective signals in outputs for benchmark runner
+        active_tasks[task_id]["outputs"]["_objective_signals"] = {
+            "syntax_ok": True if not (backend_code_final and _ast_has_error(backend_code_final)) else False,
+            "hallucination_count": len(hallucinations) if isinstance(hallucinations, list) else 0,
+            "critical_vuln_count": critical_vulns,
+            "pytest_passed": pytest_exit_code == 0 if pytest_exit_code is not None else None,
+            "deployment_valid": bool(deployment_config and "[DOCKERFILE_START]" in deployment_config),
+            "repair_count": repair_count,
+            "objective_score": objective_score,
+        }
         
         # Get LLM evaluator score from latest evaluation
         llm_score = 7.0
@@ -1145,8 +1260,12 @@ async def _run_qa_pipeline(task_id: str, title: str, project_memory: str = "") -
     else:
         await agent_event(task_id, "RuntimeExecutionAgent", "error",
                           f"Terminal test failed with exit code {exit_code}.", output=output[:1000] + "\n...")
-        
-        # Activating repair loop
+
+    # Store pytest exit code for multi-signal scoring
+    active_tasks[task_id]["outputs"]["pytest_exit_code"] = exit_code
+
+    if exit_code != 0:
+
         await agent_event(task_id, "RetryCoordinator", "active",
                           "Activating repair loop (budget: 1 retry)...")
         await agent_event(task_id, "DiagnosticsAgent", "working",
@@ -1617,8 +1736,13 @@ async def get_leaderboard_stats(request: Request):
             "total_benchmarks": 0,
             "success_rate": 0.0,
             "avg_score": 0.0,
-            "repair_success_rate": 89.0,
-            "security_pass_rate": 98.0,
+            "repair_success_rate": 0.0,
+            "security_pass_rate": 0.0,
+            "hallucination_trap_defense_rate": 0.0,
+            "adversarial_defense_rate": 0.0,
+            "avg_cost": 0.0,
+            "max_cost": 0.0,
+            "total_tokens": 0,
         },
         "benchmarks": []
     }
@@ -1671,6 +1795,63 @@ async def health(request: Request):
         "models_loaded": len(set(AGENT_MODEL_MAP.values())),
     }
 
+
+# ─────────────────────────────────────────────────────────────
+#  MEMORY ENGINE & MODEL ROUTER V2 ROUTES
+# ─────────────────────────────────────────────────────────────
+
+class BenchmarkRequest(BaseModel):
+    task_type: str
+    requirements: dict | None = None
+
+@router.get("/memory/search")
+@limiter.limit("30/minute")
+async def search_memory(request: Request, q: str = Query(..., min_length=1), limit: int = Query(5, ge=1, le=20)):
+    """Semantic search across long-term memory."""
+    from engines.memory_engine import MemoryEngine
+    try:
+        results = await MemoryEngine.semantic_search(q, limit)
+        return {"query": q, "results": results}
+    except Exception as e:
+        logger.error("Error searching memory: %s", e)
+        raise HTTPException(status_code=500, detail=f"Memory search failed: {str(e)}")
+
+@router.get("/models/performance")
+@limiter.limit("60/minute")
+async def get_models_performance(request: Request):
+    """Retrieve performance statistics for models."""
+    try:
+        async for session in get_db_session():
+            if not session:
+                # Mock DB fallback
+                from memory.db_client import ModelPerformanceDB as MockDB
+                db = MockDB(None)
+                metrics = await db.list_performances()
+                return {"provider": "NVIDIA NIM", "metrics": metrics}
+            
+            from memory.db_client import ModelPerformanceDB
+            db = ModelPerformanceDB(session)
+            metrics = await db.list_performances()
+            return {"provider": "NVIDIA NIM", "metrics": metrics}
+    except Exception as e:
+        logger.error("Error retrieving model performance: %s", e)
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve model performance: {str(e)}")
+
+@router.post("/models/benchmark")
+@limiter.limit("30/minute")
+async def benchmark_model_selection(request: Request, bench_req: BenchmarkRequest):
+    """Benchmark dynamic model selection by querying the Model Router."""
+    from engines.model_router import select_optimal_model
+    try:
+        model = await select_optimal_model(bench_req.task_type, bench_req.requirements)
+        return {
+            "task_type": bench_req.task_type,
+            "requirements": bench_req.requirements,
+            "selected_model": model
+        }
+    except Exception as e:
+        logger.error("Error selecting optimal model: %s", e)
+        raise HTTPException(status_code=500, detail=f"Model selection failed: {str(e)}")
 
 
 # ─────────────────────────────────────────────────────────────

@@ -159,3 +159,36 @@ CREATE TABLE IF NOT EXISTS benchmark_results (
 CREATE INDEX IF NOT EXISTS idx_evaluations_task_id ON evaluations(task_id);
 CREATE INDEX IF NOT EXISTS idx_benchmark_results_task_id ON benchmark_results(task_id);
 
+-- ─── MEMORY ENGINE & VECTOR EXTENSION ────────────────────────────
+-- Try to enable pgvector extension if available
+-- Note: if vector extension is not available in the DB, table creation
+-- might fail, so we catch this in database init or handle it gracefully.
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE IF NOT EXISTS memories (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    content             TEXT NOT NULL,
+    embedding           vector(1024),  -- matches nv-embed-qa-4 dimension
+    memory_type         TEXT NOT NULL, -- architecture | conversation | pr_review | coding_standard | etc.
+    source_task_id      UUID REFERENCES tasks(id) ON DELETE SET NULL,
+    confidence_score    DOUBLE PRECISION DEFAULT 1.0,
+    access_count        INTEGER DEFAULT 0,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ─── MODEL ROUTER PERFORMANCE ────────────────────────────────────
+CREATE TABLE IF NOT EXISTS model_performance (
+    id                  SERIAL PRIMARY KEY,
+    model_name          TEXT NOT NULL,
+    task_type           TEXT NOT NULL, -- coding | reasoning | testing | etc.
+    success_rate        DOUBLE PRECISION DEFAULT 100.0,
+    avg_latency_ms      DOUBLE PRECISION DEFAULT 0.0,
+    hallucination_rate  DOUBLE PRECISION DEFAULT 0.0,
+    cost_per_token      DOUBLE PRECISION DEFAULT 0.0,
+    last_updated        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_model_task UNIQUE (model_name, task_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_memories_task_id ON memories(source_task_id);
+CREATE INDEX IF NOT EXISTS idx_model_performance_lookup ON model_performance(model_name, task_type);

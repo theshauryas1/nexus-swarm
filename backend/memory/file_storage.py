@@ -8,11 +8,99 @@ import io
 import logging
 import os
 import zipfile
-from google.cloud import storage
+try:
+    from google.cloud import storage as _gcs_storage  # optional — only needed if GCS_BUCKET is set
+    _GCS_AVAILABLE = True
+except ImportError:
+    _gcs_storage = None  # type: ignore
+    _GCS_AVAILABLE = False
+
+
+import re as _re
 
 from config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+# ── LLM Output Cleaner ────────────────────────────────────────────────────────
+
+_PROSE_LINE = _re.compile(
+    r'^(?:here(?:\'s| is)|below is|sure[,!]?|this is|i(?:\'ve| have| will)|'
+    r'let me|certainly[,!]?|of course[,!]?|absolutely[,!]?|output:|result:|'
+    r'the (?:following|code)|note:)[^\n]*\n?',
+    _re.IGNORECASE,
+)
+
+# Extension → allowed fence language tags (empty string matches bare ```)
+_FENCE_TAGS: dict[str, list[str]] = {
+    ".py":   ["python", "py", "python3", ""],
+    ".yaml": ["yaml", "yml", ""],
+    ".yml":  ["yaml", "yml", ""],
+    ".json": ["json", ""],
+    ".ts":   ["typescript", "ts", "tsx", ""],
+    ".tsx":  ["typescript", "ts", "tsx", ""],
+    ".md":   [],   # preserve — md files legitimately contain fences
+    ".txt":  [],
+    "":      ["python", "yaml", "json", "typescript", "ts", "bash", "sh", ""],
+}
+
+
+def _strip_llm_fences(content: str, filename: str = "") -> str:
+    """
+    Remove markdown code fences and chatty preamble from LLM-generated output.
+
+    Handles patterns like:
+        Here's the implementation:
+        ```python
+        <actual code>
+        ```
+        Let me know if you need changes!
+
+    Falls back to original content if stripping produces nothing (safety net).
+    Does NOT modify .md / .txt files — they may contain legitimate fences.
+    """
+    if not content or not content.strip():
+        return content
+
+    _, ext = os.path.splitext(filename.lower()) if filename else ("", "")
+
+    # Preserve docs/text untouched
+    if ext in (".md", ".rst", ".txt", ""):
+        # Still strip prose preamble even for unknown extensions
+        if "```" not in content:
+            cleaned = _PROSE_LINE.sub("", content.strip())
+            return cleaned if cleaned.strip() else content
+        if ext:
+            return content
+
+    tags = _FENCE_TAGS.get(ext, _FENCE_TAGS[""])
+    tag_alts = "|".join(_re.escape(t) for t in tags)
+
+    if tag_alts:
+        pattern = _re.compile(
+            r'```(?:' + tag_alts + r')?\s*\n(.*?)```',
+            _re.DOTALL | _re.IGNORECASE,
+        )
+    else:
+        pattern = _re.compile(r'```[^\n]*\n(.*?)```', _re.DOTALL)
+
+    matches = pattern.findall(content)
+    if matches:
+        joined = "\n\n".join(m.rstrip() for m in matches if m.strip())
+        if joined.strip():
+            return joined.strip()
+
+    # No fences — strip prose preamble lines from the top
+    cleaned = _PROSE_LINE.sub("", content.strip())
+    # Also drop trailing "let me know" lines
+    cleaned = _re.sub(
+        r'\n(?:let me know|feel free|hope this helps|if you have)[^\n]*$',
+        "", cleaned, flags=_re.IGNORECASE,
+    )
+    return cleaned.strip() if cleaned.strip() else content
+
+
 
 def secure_path(base_dir: str, *subpaths: str) -> str:
     """
@@ -57,17 +145,18 @@ def get_storage_client():
     global _storage_client
     if _storage_client is None:
         settings = get_settings()
-        if settings.gcs_bucket:
+        if settings.gcs_bucket and _GCS_AVAILABLE and _gcs_storage is not None:
             try:
                 opts = {}
                 if settings.project_id:
                     opts["project"] = settings.project_id
-                _storage_client = storage.Client(**opts)
-                logger.info("✅ GCS Client initialized successfully")
+                _storage_client = _gcs_storage.Client(**opts)
+                logger.info("GCS Client initialized successfully")
             except Exception as e:
-                logger.warning("⚠️ Failed to initialize GCS Client: %s", e)
+                logger.warning("Failed to initialize GCS Client: %s", e)
                 _storage_client = None
     return _storage_client
+
 
 def get_filename_for_agent(agent_name: str) -> str:
     return AGENT_FILE_MAP.get(agent_name, f"{agent_name.lower()}_output.txt")
@@ -81,18 +170,21 @@ def get_lang_for_filename(filename: str) -> str:
 async def save_file(task_id: str, agent_name: str, content: str) -> str:
     """
     Saves an agent output content to local filesystem AND Google Cloud Storage (GCS) if enabled.
+    Strips LLM markdown code fences and prose preambles before writing.
     Returns the file path or URI where it was saved.
     """
     filename = get_filename_for_agent(agent_name)
     settings = get_settings()
 
+    # ── Strip markdown fences / prose preamble ──────────────────────────────
+    content = _strip_llm_fences(content, filename)
+
     # 1. Save locally (always, for terminal access / local workspace compatibility)
-    # Put it inside /app/workspace/{task_id} or ./workspace/{task_id}
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "workspace"))
     local_path = secure_path(base_dir, task_id, filename)
     task_dir = os.path.dirname(local_path)
     os.makedirs(task_dir, exist_ok=True)
-    
+
     with open(local_path, "w", encoding="utf-8") as f:
         f.write(content)
     logger.info("Saved local file: %s", local_path)

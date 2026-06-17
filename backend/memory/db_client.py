@@ -28,6 +28,8 @@ _MOCK_OUTPUTS = []
 _MOCK_CONFLICTS = {}
 _MOCK_EVALUATIONS = []
 _MOCK_BENCHMARKS = []
+_MOCK_MEMORIES = []
+_MOCK_MODEL_PERFORMANCE = {}
 
 
 def get_engine():
@@ -655,6 +657,8 @@ class BenchmarkDB:
         failure_reason: str | None = None,
         root_cause: str | None = None,
         recovery_success: bool | None = None,
+        estimated_cost: float = 0.0,
+        total_tokens: int = 0,
     ) -> int:
         if _use_mock_db:
             bench_id = len(_MOCK_BENCHMARKS) + 1
@@ -669,6 +673,8 @@ class BenchmarkDB:
                 "failure_reason": failure_reason,
                 "root_cause": root_cause,
                 "recovery_success": recovery_success,
+                "estimated_cost": estimated_cost,
+                "total_tokens": total_tokens,
                 "created_at": datetime.now()
             })
             return bench_id
@@ -677,10 +683,12 @@ class BenchmarkDB:
             text("""
                 INSERT INTO benchmark_results (
                     benchmark_name, task_id, pass, score, execution_time,
-                    repair_iterations, failure_reason, root_cause, recovery_success
+                    repair_iterations, failure_reason, root_cause, recovery_success,
+                    estimated_cost, total_tokens
                 ) VALUES (
                     :benchmark_name, :task_id, :pass_status, :score, :execution_time,
-                    :repair_iterations, :failure_reason, :root_cause, :recovery_success
+                    :repair_iterations, :failure_reason, :root_cause, :recovery_success,
+                    :estimated_cost, :total_tokens
                 ) RETURNING id
             """),
             {
@@ -693,6 +701,8 @@ class BenchmarkDB:
                 "failure_reason": failure_reason,
                 "root_cause": root_cause,
                 "recovery_success": recovery_success,
+                "estimated_cost": estimated_cost,
+                "total_tokens": total_tokens,
             }
         )
         await self.session.commit()
@@ -716,54 +726,352 @@ class BenchmarkDB:
     async def get_benchmark_stats(self) -> dict:
         if _use_mock_db:
             total = len(_MOCK_BENCHMARKS)
-            passed = sum(1 for b in _MOCK_BENCHMARKS if b["pass"])
-            avg_score = sum(b["score"] for b in _MOCK_BENCHMARKS) / total if total > 0 else 0.0
-            success_rate = (passed / total) * 100 if total > 0 else 0.0
+            if total == 0:
+                return {
+                    "total_benchmarks": 0,
+                    "success_rate": 0.0,
+                    "avg_score": 0.0,
+                    "repair_success_rate": 0.0,
+                    "security_pass_rate": 0.0,
+                    "hallucination_trap_defense_rate": 0.0,
+                    "adversarial_defense_rate": 0.0,
+                    "avg_cost": 0.0,
+                    "max_cost": 0.0,
+                    "total_tokens": 0,
+                }
+            passed = sum(1 for b in _MOCK_BENCHMARKS if b.get("pass", b.get("pass_status", False)))
+            avg_score = sum(b["score"] for b in _MOCK_BENCHMARKS) / total
+            success_rate = (passed / total) * 100
+
+            # Adversarial defense: separate category
+            adv = [b for b in _MOCK_BENCHMARKS if "[ADVERSARIAL]" in b.get("benchmark_name", "").upper()]
+            adv_blocked = sum(1 for b in adv if b.get("pass", b.get("pass_status", False)))
+            adversarial_defense_rate = (adv_blocked / len(adv)) * 100 if adv else 0.0
+
+            # Hallucination trap defense: tasks that did NOT trigger a known trap
+            halluc = [b for b in _MOCK_BENCHMARKS if "[HALLUCINATION]" in b.get("benchmark_name", "").upper()]
+            trap_ok = sum(1 for b in halluc if b.get("root_cause", "") != "hallucination_trap_triggered")
+            halluc_trap_rate = (trap_ok / len(halluc)) * 100 if halluc else 0.0
+
+            # Repair success rate: tasks with repair_iterations > 0 that passed
+            repaired = [b for b in _MOCK_BENCHMARKS if b.get("repair_iterations", 0) > 0]
+            repair_success = sum(1 for b in repaired if b.get("pass", b.get("pass_status", False)))
+            repair_success_rate = (repair_success / len(repaired)) * 100 if repaired else 0.0
+            
+            # LLMOps metrics
+            avg_cost = sum(b.get("estimated_cost", 0.0) for b in _MOCK_BENCHMARKS) / total
+            max_cost = max((b.get("estimated_cost", 0.0) for b in _MOCK_BENCHMARKS), default=0.0)
+            total_tokens = sum(b.get("total_tokens", 0) for b in _MOCK_BENCHMARKS)
+
             return {
                 "total_benchmarks": total,
-                "success_rate": success_rate,
-                "avg_score": avg_score,
-                "repair_success_rate": 89.0,
-                "security_pass_rate": 98.0,
+                "success_rate": round(success_rate, 1),
+                "avg_score": round(avg_score, 2),
+                "repair_success_rate": round(repair_success_rate, 1),
+                "security_pass_rate": 0.0,  # not tracked in mock
+                "hallucination_trap_defense_rate": round(halluc_trap_rate, 1),
+                "adversarial_defense_rate": round(adversarial_defense_rate, 1),
+                "avg_cost": round(avg_cost, 4),
+                "max_cost": round(max_cost, 4),
+                "total_tokens": int(total_tokens),
             }
 
-        # Query real stats
+        # ── Real DB stats ──────────────────────────────────────────
         result = await self.session.execute(text("""
             SELECT
-                COUNT(*)::float                                 AS total_benchmarks,
-                COALESCE(AVG(score), 0.0)::float                 AS avg_score,
-                (COUNT(*) FILTER (WHERE pass = true)::float / NULLIF(COUNT(*), 0)) * 100 AS success_rate
+                COUNT(*)::float                                                      AS total_benchmarks,
+                COALESCE(AVG(score), 0.0)::float                                     AS avg_score,
+                COALESCE(
+                    (COUNT(*) FILTER (WHERE pass = true)::float / NULLIF(COUNT(*), 0)) * 100,
+                    0.0
+                )                                                                    AS success_rate,
+                COALESCE(
+                    (COUNT(*) FILTER (WHERE repair_iterations > 0 AND pass = true)::float /
+                     NULLIF(COUNT(*) FILTER (WHERE repair_iterations > 0), 0)) * 100,
+                    0.0
+                )                                                                    AS repair_success_rate,
+                COALESCE(
+                    (COUNT(*) FILTER (
+                        WHERE benchmark_name ILIKE '[ADVERSARIAL]%' AND pass = true
+                    )::float / NULLIF(COUNT(*) FILTER (
+                        WHERE benchmark_name ILIKE '[ADVERSARIAL]%'
+                    ), 0)) * 100,
+                    0.0
+                )                                                                    AS adversarial_defense_rate,
+                COALESCE(
+                    (COUNT(*) FILTER (
+                        WHERE benchmark_name ILIKE '[HALLUCINATION]%'
+                        AND (root_cause IS NULL OR root_cause != 'hallucination_trap_triggered')
+                    )::float / NULLIF(COUNT(*) FILTER (
+                        WHERE benchmark_name ILIKE '[HALLUCINATION]%'
+                    ), 0)) * 100,
+                    0.0
+                )                                                                    AS hallucination_trap_defense_rate,
+                COALESCE(AVG(estimated_cost), 0.0)::float                             AS avg_cost,
+                COALESCE(MAX(estimated_cost), 0.0)::float                             AS max_cost,
+                COALESCE(SUM(total_tokens), 0)::bigint                                AS total_tokens
             FROM benchmark_results
         """))
         stats = dict(result.mappings().one())
-        
-        # Calculate security pass rate
+
+        # Security pass rate: from evaluations table
         sec_result = await self.session.execute(text("""
             SELECT
-                (COUNT(*) FILTER (WHERE security_score >= 8.0)::float / NULLIF(COUNT(*), 0)) * 100 AS security_pass_rate
+                COALESCE(
+                    (COUNT(*) FILTER (WHERE security_score >= 8.0)::float / NULLIF(COUNT(*), 0)) * 100,
+                    0.0
+                ) AS security_pass_rate
             FROM evaluations
         """))
         sec_stats = dict(sec_result.mappings().one())
-        
-        # Calculate repair success rate (where tasks completed successfully)
-        repair_result = await self.session.execute(text("""
-            SELECT
-                (COUNT(*) FILTER (WHERE status = 'complete')::float / NULLIF(COUNT(*), 0)) * 100 AS repair_success_rate
-            FROM tasks
-        """))
-        repair_stats = dict(repair_result.mappings().one())
 
         return {
             "total_benchmarks": int(stats.get("total_benchmarks") or 0),
-            "success_rate": float(stats.get("success_rate") or 0.0),
-            "avg_score": float(stats.get("avg_score") or 0.0),
-            "repair_success_rate": float(repair_stats.get("repair_success_rate") or 89.0),
-            "security_pass_rate": float(sec_stats.get("security_pass_rate") or 98.0),
+            "success_rate": round(float(stats.get("success_rate") or 0.0), 1),
+            "avg_score": round(float(stats.get("avg_score") or 0.0), 2),
+            "repair_success_rate": round(float(stats.get("repair_success_rate") or 0.0), 1),
+            "security_pass_rate": round(float(sec_stats.get("security_pass_rate") or 0.0), 1),
+            "adversarial_defense_rate": round(float(stats.get("adversarial_defense_rate") or 0.0), 1),
+            "hallucination_trap_defense_rate": round(float(stats.get("hallucination_trap_defense_rate") or 0.0), 1),
+            "avg_cost": round(float(stats.get("avg_cost") or 0.0), 4),
+            "max_cost": round(float(stats.get("max_cost") or 0.0), 4),
+            "total_tokens": int(stats.get("total_tokens") or 0),
         }
 
 
+
+class MemoryDB:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def save_memory(
+        self,
+        content: str,
+        memory_type: str,
+        embedding: list[float] | None = None,
+        source_task_id: str | None = None,
+        confidence_score: float = 1.0,
+    ) -> str:
+        if _use_mock_db or self.session is None:
+            import uuid
+            memory_id = str(uuid.uuid4())
+            _MOCK_MEMORIES.append({
+                "id": memory_id,
+                "content": content,
+                "embedding": embedding,
+                "memory_type": memory_type,
+                "source_task_id": source_task_id,
+                "confidence_score": confidence_score,
+                "access_count": 0,
+                "created_at": datetime.now(),
+                "updated_at": datetime.now()
+            })
+            return memory_id
+
+        emb_val = None
+        if embedding:
+            emb_val = "[" + ",".join(map(str, embedding)) + "]"
+        
+        result = await self.session.execute(
+            text("""
+                INSERT INTO memories (content, embedding, memory_type, source_task_id, confidence_score)
+                VALUES (:content, :embedding, :memory_type, :source_task_id, :confidence_score)
+                RETURNING id
+            """),
+            {
+                "content": content,
+                "embedding": emb_val,
+                "memory_type": memory_type,
+                "source_task_id": source_task_id,
+                "confidence_score": confidence_score,
+            }
+        )
+        await self.session.commit()
+        return str(result.scalar())
+
+    async def semantic_search(self, query_embedding: list[float], limit: int = 5) -> list[dict]:
+        if _use_mock_db or self.session is None:
+            if not _MOCK_MEMORIES:
+                return []
+            
+            def cosine_similarity(v1, v2):
+                if not v1 or not v2 or len(v1) != len(v2):
+                    return 0.0
+                import math
+                dot = sum(a * b for a, b in zip(v1, v2))
+                norm1 = math.sqrt(sum(a * a for a in v1))
+                norm2 = math.sqrt(sum(b * b for b in v2))
+                if norm1 == 0 or norm2 == 0:
+                    return 0.0
+                return dot / (norm1 * norm2)
+
+            scored = []
+            for m in _MOCK_MEMORIES:
+                sim = cosine_similarity(query_embedding, m["embedding"]) if m["embedding"] else 0.0
+                scored.append((m, sim))
+            
+            scored.sort(key=lambda x: x[1], reverse=True)
+            results = []
+            for m, sim in scored[:limit]:
+                m["access_count"] += 1
+                res = m.copy()
+                res["similarity"] = sim
+                results.append(res)
+            return results
+
+        # Fallback query if pgvector fails: we select all and compute or use standard vector operators
+        # Check if vector extension is enabled by running standard query. If it fails, fallback to keyword or list matching
+        try:
+            emb_val = "[" + ",".join(map(str, query_embedding)) + "]"
+            result = await self.session.execute(
+                text("""
+                    SELECT id, content, memory_type, source_task_id, confidence_score, access_count, created_at,
+                           (1 - (embedding <=> :query_embedding::vector)) AS similarity
+                    FROM memories
+                    WHERE embedding IS NOT NULL
+                    ORDER BY embedding <=> :query_embedding::vector
+                    LIMIT :limit
+                """),
+                {"query_embedding": emb_val, "limit": limit}
+            )
+            rows = [dict(row) for row in result.mappings()]
+            if rows:
+                ids = [row["id"] for row in rows]
+                await self.session.execute(
+                    text("UPDATE memories SET access_count = access_count + 1 WHERE id = ANY(:ids)"),
+                    {"ids": ids}
+                )
+                await self.session.commit()
+            return rows
+        except Exception as e:
+            logger.warning("pgvector search failed, falling back to simple retrieval: %s", e)
+            result = await self.session.execute(
+                text("SELECT id, content, memory_type, source_task_id, confidence_score, access_count, created_at FROM memories LIMIT :limit"),
+                {"limit": limit}
+            )
+            rows = [dict(row) for row in result.mappings()]
+            for r in rows:
+                r["similarity"] = 0.5 # Default fallback similarity
+            return rows
+
+    async def list_memories(self, memory_type: str | None = None, limit: int = 20) -> list[dict]:
+        if _use_mock_db or self.session is None:
+            memories = _MOCK_MEMORIES
+            if memory_type:
+                memories = [m for m in memories if m["memory_type"] == memory_type]
+            memories = sorted(memories, key=lambda m: m["created_at"], reverse=True)
+            return memories[:limit]
+
+        try:
+            if memory_type:
+                result = await self.session.execute(
+                    text("SELECT id, content, memory_type, source_task_id, confidence_score, access_count, created_at FROM memories WHERE memory_type = :memory_type ORDER BY created_at DESC LIMIT :limit"),
+                    {"memory_type": memory_type, "limit": limit}
+                )
+            else:
+                result = await self.session.execute(
+                    text("SELECT id, content, memory_type, source_task_id, confidence_score, access_count, created_at FROM memories ORDER BY created_at DESC LIMIT :limit"),
+                    {"limit": limit}
+                )
+            return [dict(row) for row in result.mappings()]
+        except Exception as e:
+            logger.warning("Failed to query memories from DB, falling back to mock: %s", e)
+            memories = _MOCK_MEMORIES
+            if memory_type:
+                memories = [m for m in memories if m["memory_type"] == memory_type]
+            return memories[:limit]
+
+
+class ModelPerformanceDB:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def log_performance(
+        self,
+        model_name: str,
+        task_type: str,
+        latency_ms: float,
+        success: bool,
+        cost_per_token: float = 0.0
+    ) -> None:
+        if _use_mock_db or self.session is None:
+            key = (model_name, task_type)
+            if key not in _MOCK_MODEL_PERFORMANCE:
+                _MOCK_MODEL_PERFORMANCE[key] = {
+                    "model_name": model_name,
+                    "task_type": task_type,
+                    "success_rate": 100.0 if success else 0.0,
+                    "avg_latency_ms": latency_ms,
+                    "hallucination_rate": 0.0,
+                    "cost_per_token": cost_per_token,
+                    "last_updated": datetime.now(),
+                    "total_calls": 1,
+                    "success_calls": 1 if success else 0
+                }
+            else:
+                p = _MOCK_MODEL_PERFORMANCE[key]
+                p["total_calls"] += 1
+                if success:
+                    p["success_calls"] += 1
+                p["success_rate"] = (p["success_calls"] / p["total_calls"]) * 100.0
+                p["avg_latency_ms"] = (p["avg_latency_ms"] * (p["total_calls"] - 1) + latency_ms) / p["total_calls"]
+                p["cost_per_token"] = cost_per_token
+                p["last_updated"] = datetime.now()
+            return
+
+        success_val = 100.0 if success else 0.0
+        await self.session.execute(
+            text("""
+                INSERT INTO model_performance (model_name, task_type, success_rate, avg_latency_ms, cost_per_token, last_updated)
+                VALUES (:model_name, :task_type, :success_rate, :avg_latency_ms, :cost_per_token, NOW())
+                ON CONFLICT (model_name, task_type) DO UPDATE SET
+                    success_rate = (model_performance.success_rate * 0.9) + (:success_rate * 0.1),
+                    avg_latency_ms = (model_performance.avg_latency_ms * 0.9) + (:avg_latency_ms * 0.1),
+                    cost_per_token = :cost_per_token,
+                    last_updated = NOW()
+            """),
+            {
+                "model_name": model_name,
+                "task_type": task_type,
+                "success_rate": success_val,
+                "avg_latency_ms": latency_ms,
+                "cost_per_token": cost_per_token,
+            }
+        )
+        await self.session.commit()
+
+    async def get_performance(self, model_name: str, task_type: str) -> dict | None:
+        if _use_mock_db or self.session is None:
+            return _MOCK_MODEL_PERFORMANCE.get((model_name, task_type))
+
+        try:
+            result = await self.session.execute(
+                text("SELECT * FROM model_performance WHERE model_name = :model_name AND task_type = :task_type"),
+                {"model_name": model_name, "task_type": task_type}
+            )
+            row = result.mappings().first()
+            return dict(row) if row else None
+        except Exception as e:
+            logger.warning("Failed to query model_performance from DB, falling back to mock: %s", e)
+            return _MOCK_MODEL_PERFORMANCE.get((model_name, task_type))
+
+    async def list_performances(self) -> list[dict]:
+        if _use_mock_db or self.session is None:
+            return list(_MOCK_MODEL_PERFORMANCE.values())
+
+        try:
+            result = await self.session.execute(
+                text("SELECT * FROM model_performance ORDER BY last_updated DESC")
+            )
+            return [dict(row) for row in result.mappings()]
+        except Exception as e:
+            logger.warning("Failed to query model_performance from DB, falling back to mock: %s", e)
+            return list(_MOCK_MODEL_PERFORMANCE.values())
+
+
+
 async def init_db_tables() -> None:
-    """Ensure evaluations and benchmark_results tables exist."""
+    """Ensure evaluations, benchmark_results, memories and model_performance tables exist."""
     global _use_mock_db
     if _use_mock_db:
         return
@@ -802,7 +1110,56 @@ async def init_db_tables() -> None:
                     failure_reason          TEXT,
                     root_cause              TEXT,
                     recovery_success        BOOLEAN,
+                    estimated_cost          DOUBLE PRECISION DEFAULT 0.0,
+                    total_tokens            INTEGER DEFAULT 0,
                     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """))
+            
+            # Create memories table (try pgvector first, fallback to standard TEXT)
+            try:
+                await session.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                await session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS memories (
+                        id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        content             TEXT NOT NULL,
+                        embedding           vector(1024),
+                        memory_type         TEXT NOT NULL,
+                        source_task_id      UUID REFERENCES tasks(id) ON DELETE SET NULL,
+                        confidence_score    DOUBLE PRECISION DEFAULT 1.0,
+                        access_count        INTEGER DEFAULT 0,
+                        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """))
+            except Exception as e:
+                logger.warning("Could not initialize memories table with pgvector, trying fallback: %s", e)
+                await session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS memories (
+                        id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        content             TEXT NOT NULL,
+                        embedding           TEXT,
+                        memory_type         TEXT NOT NULL,
+                        source_task_id      UUID REFERENCES tasks(id) ON DELETE SET NULL,
+                        confidence_score    DOUBLE PRECISION DEFAULT 1.0,
+                        access_count        INTEGER DEFAULT 0,
+                        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """))
+
+            # Create model_performance table
+            await session.execute(text("""
+                CREATE TABLE IF NOT EXISTS model_performance (
+                    id                  SERIAL PRIMARY KEY,
+                    model_name          TEXT NOT NULL,
+                    task_type           TEXT NOT NULL,
+                    success_rate        DOUBLE PRECISION DEFAULT 100.0,
+                    avg_latency_ms      DOUBLE PRECISION DEFAULT 0.0,
+                    hallucination_rate  DOUBLE PRECISION DEFAULT 0.0,
+                    cost_per_token      DOUBLE PRECISION DEFAULT 0.0,
+                    last_updated        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    CONSTRAINT uq_model_task UNIQUE (model_name, task_type)
                 )
             """))
             
@@ -811,7 +1168,9 @@ async def init_db_tables() -> None:
                 ("repair_iterations", "INTEGER DEFAULT 0"),
                 ("failure_reason", "TEXT"),
                 ("root_cause", "TEXT"),
-                ("recovery_success", "BOOLEAN")
+                ("recovery_success", "BOOLEAN"),
+                ("estimated_cost", "DOUBLE PRECISION DEFAULT 0.0"),
+                ("total_tokens", "INTEGER DEFAULT 0")
             ]:
                 try:
                     await session.execute(text(f"ALTER TABLE benchmark_results ADD COLUMN IF NOT EXISTS {col} {col_type}"))

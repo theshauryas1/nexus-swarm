@@ -100,6 +100,40 @@ AGENT_MODEL_MAP: dict[str, str] = {
     "HallucinationDetectorAgent": LLAMA_8B,       # Static/dynamic import validation
 }
 
+AGENT_TO_TASK_TYPE: dict[str, str] = {
+    "HeadOrchestrator": "task_decomposition",
+    "PlanningManager": "coordination",
+    "EngineeringManager": "coordination",
+    "QAManager": "coordination",
+    "SecurityManager": "security_scan",
+    "DevOpsManager": "coordination",
+    "ReliabilityManager": "coordination",
+    "RequirementAgent": "planning",
+    "RiskAnalyzer": "planning",
+    "BackendAgent": "code_generation",
+    "APIAgent": "code_generation",
+    "FrontendAgent": "code_generation",
+    "TestAgent": "testing",
+    "ReviewerAgent": "refactoring",
+    "RuntimeExecutionAgent": "validation",
+    "ScannerAgent": "security_scan",
+    "DeployAgent": "reliability",
+    "DiagnosticsAgent": "diagnostics",
+    "RepairAgent": "bug_fix",
+    "RetryCoordinator": "coordination",
+    "KnowledgeMemoryAgent": "validation",
+    "HallucinationValidator": "validation",
+    "SemanticValidator": "validation",
+    "ContractValidator": "validation",
+    "HumanApprovalGateway": "architecture",
+    "EvaluatorAgent": "validation",
+    "CriticAgent": "validation",
+    "RefinerAgent": "refactoring",
+    "HallucinationDetectorAgent": "validation",
+    "ArchitectAgent": "architecture",
+    "CoderAgent": "code_generation",
+}
+
 
 # ─────────────────────────────────────────────────────────────
 #  CLIENT FACTORY
@@ -146,20 +180,38 @@ def get_model_for_agent(agent_name: str) -> str:
 # ─────────────────────────────────────────────────────────────
 
 async def call_agent_llm(
-
-
     agent_name: str,
     prompt: str,
     system: Optional[str] = None,
     max_tokens: int = 2048,
     temperature: float = 0.2,
+    task_id: Optional[str] = None,
 ) -> str:
     """
-    Main inference function. Selects model by agent name,
-    calls LLM provider, returns response string.
+    Main inference function. Selects model dynamically via Model Router,
+    calls LLM provider, and logs latency/outcome statistics.
     """
+    import time
     provider = os.environ.get("LLM_PROVIDER", "nvidia")
-    model = "gemma4:e2b" if provider == "ollama" else get_model_for_agent(agent_name)
+    task_type = AGENT_TO_TASK_TYPE.get(agent_name, "default")
+    
+    # Resolve model dynamically
+    if provider != "ollama":
+        from engines.model_router import select_optimal_model
+        requirements = {}
+        if agent_name in ("HeadOrchestrator", "SecurityManager", "ScannerAgent"):
+            requirements["min_success_rate"] = 90.0
+        elif agent_name in ("BackendAgent", "APIAgent", "FrontendAgent", "ArchitectAgent", "CoderAgent"):
+            requirements["min_success_rate"] = 85.0
+            
+        try:
+            model = await select_optimal_model(task_type, requirements)
+        except Exception as err:
+            logger.warning(f"Model Router failed for {agent_name}: {err}. Using static mapping.")
+            model = get_model_for_agent(agent_name)
+    else:
+        model = "gemma4:e2b"
+
     client = _get_client()
 
     # ── Security: sanitize user-supplied prompt before forwarding
@@ -173,6 +225,8 @@ async def call_agent_llm(
 
     logger.info(f"[{agent_name}] Calling {provider} model: {model}")
 
+    start_time = time.time()
+    success = False
     try:
         response = await client.chat.completions.create(
             model=model,
@@ -181,12 +235,22 @@ async def call_agent_llm(
             temperature=temperature,
         )
         content = response.choices[0].message.content
+        success = True
+        
+        prompt_tokens = response.usage.prompt_tokens if (response.usage and hasattr(response.usage, "prompt_tokens")) else 0
+        completion_tokens = response.usage.completion_tokens if (response.usage and hasattr(response.usage, "completion_tokens")) else 0
         tokens_used = response.usage.total_tokens if (response.usage and hasattr(response.usage, "total_tokens")) else 0
+        
         logger.info(f"[{agent_name}] Response received ({tokens_used} tokens)")
 
         # ── Security: record token usage for budget tracking
         if tokens_used:
             record_token_usage("system", int(tokens_used))
+
+        # ── LLMOps: record task-level cost/token billing
+        if task_id and (prompt_tokens or completion_tokens):
+            from memory.cost_tracker import record_task_llm_usage
+            record_task_llm_usage(task_id, model, prompt_tokens, completion_tokens)
 
         # ── Security: sanitize LLM output before returning (XSS defence-in-depth)
         return sanitize_llm_output(content)
@@ -194,20 +258,29 @@ async def call_agent_llm(
     except Exception as e:
         logger.error(f"[{agent_name}] {provider} call failed: {e}")
         raise
+    finally:
+        latency_ms = (time.time() - start_time) * 1000.0
+        if provider != "ollama":
+            try:
+                from engines.model_router import log_model_outcome
+                await log_model_outcome(model, task_type, latency_ms, success)
+            except Exception as ex:
+                logger.warning(f"Failed to log model outcome to db: {ex}")
+
 
 
 # ─────────────────────────────────────────────────────────────
 #  CONVENIENCE WRAPPERS
 # ─────────────────────────────────────────────────────────────
 
-async def orchestrator_call(prompt: str, system: str = "") -> str:
-    return await call_agent_llm("HeadOrchestrator", prompt, system)
+async def orchestrator_call(prompt: str, system: str = "", task_id: Optional[str] = None) -> str:
+    return await call_agent_llm("HeadOrchestrator", prompt, system, task_id=task_id)
 
-async def manager_call(manager_name: str, prompt: str, system: str = "") -> str:
-    return await call_agent_llm(manager_name, prompt, system)
+async def manager_call(manager_name: str, prompt: str, system: str = "", task_id: Optional[str] = None) -> str:
+    return await call_agent_llm(manager_name, prompt, system, task_id=task_id)
 
-async def worker_call(worker_name: str, prompt: str, system: str = "") -> str:
-    return await call_agent_llm(worker_name, prompt, system)
+async def worker_call(worker_name: str, prompt: str, system: str = "", task_id: Optional[str] = None) -> str:
+    return await call_agent_llm(worker_name, prompt, system, task_id=task_id)
 
 
 # ─────────────────────────────────────────────────────────────

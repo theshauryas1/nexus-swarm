@@ -1,7 +1,7 @@
 // components/IDE/AgentTreePanel.tsx — VS Code Explorer style agent hierarchy tree
 // Reads live statuses from Zustand store
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { getApiErrorMessage, useNexusStore, safeGet } from "../../store/agentStore"
 
 type Panel = "agents" | "files" | "outputs" | "pipelines" | "leaderboard"
@@ -506,6 +506,24 @@ export function AgentTreePanel({ activePanel }: Props) {
               {stats.hallucination_pass_rate != null ? `${stats.hallucination_pass_rate.toFixed(1)}%` : "—"}
             </div>
           </div>
+          <div style={{ background: "#1e1e1e", padding: 7, borderRadius: 4, border: "1px solid #2d2d2d" }}>
+            <div style={{ fontSize: 8, color: "#858585", marginBottom: 2 }}>AVG COST</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#38bdf8" }}>
+              {stats.avg_cost != null ? `$${stats.avg_cost.toFixed(4)}` : "$0.0000"}
+            </div>
+          </div>
+          <div style={{ background: "#1e1e1e", padding: 7, borderRadius: 4, border: "1px solid #2d2d2d" }}>
+            <div style={{ fontSize: 8, color: "#858585", marginBottom: 2 }}>MAX COST</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#818cf8" }}>
+              {stats.max_cost != null ? `$${stats.max_cost.toFixed(4)}` : "$0.0000"}
+            </div>
+          </div>
+          <div style={{ background: "#1e1e1e", padding: 7, borderRadius: 4, border: "1px solid #2d2d2d" }}>
+            <div style={{ fontSize: 8, color: "#858585", marginBottom: 2 }}>TOTAL TOKENS</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#fbbf24" }}>
+              {stats.total_tokens != null ? stats.total_tokens.toLocaleString() : "0"}
+            </div>
+          </div>
         </div>
 
         {/* Run Controls */}
@@ -618,7 +636,15 @@ export function AgentTreePanel({ activePanel }: Props) {
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#858585" }}>
                       <span>Score: <strong style={{ color: getScoreColor(b.score) }}>{b.score.toFixed(1)}/10</strong></span>
-                      <span>{b.execution_time.toFixed(1)}s {hasDetails ? (isExpanded ? "▲" : "▼") : ""}</span>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        {b.estimated_cost != null && b.estimated_cost > 0 && (
+                          <span style={{ color: "#38bdf8" }}>${b.estimated_cost.toFixed(3)}</span>
+                        )}
+                        {b.total_tokens != null && b.total_tokens > 0 && (
+                          <span style={{ color: "#fbbf24" }}>({(b.total_tokens / 1000).toFixed(0)}k)</span>
+                        )}
+                        <span>{b.execution_time.toFixed(1)}s {hasDetails ? (isExpanded ? "▲" : "▼") : ""}</span>
+                      </div>
                     </div>
                   </div>
 

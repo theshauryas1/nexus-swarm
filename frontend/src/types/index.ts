@@ -73,6 +73,11 @@ export interface BenchmarkStats {
   repair_success_rate: number
   security_pass_rate: number
   hallucination_pass_rate?: number
+  hallucination_trap_defense_rate?: number
+  adversarial_defense_rate?: number
+  avg_cost?: number
+  max_cost?: number
+  total_tokens?: number
 }
 
 export interface BenchmarkResult {
@@ -90,6 +95,8 @@ export interface BenchmarkResult {
   failure_reason?: string | null
   root_cause?: string | null
   recovery_success?: boolean | null
+  estimated_cost?: number
+  total_tokens?: number
 }
 
 export interface LeaderboardData {

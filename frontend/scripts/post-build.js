@@ -95,6 +95,12 @@ for (const file of files) {
   // 10. assign boolean properties (A[e]=!0)
   content = content.replace(/(\w+)\[(\w+)\]=!0/g, 'Reflect.set($1, $2, !0)');
 
+  // 11. string literal properties (e["@@iterator"])
+  content = content.replace(/(\w+)\["@@iterator"\]/g, 'Reflect.get($1, "@@iterator")');
+
+  // 12. dynamic defaults access (e[t]||e.default)
+  content = content.replace(/(\w+)\[(\w+)\]\|\|(\w+)\.default/g, 'Reflect.get($1, $2)||$3.default');
+
   if (content.length !== originalLength || content !== fs.readFileSync(filePath, 'utf8')) {
     fs.writeFileSync(filePath, content, 'utf8');
     console.log(`Successfully patched ${file}. New size: ${content.length} bytes.`);
