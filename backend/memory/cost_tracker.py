@@ -6,14 +6,20 @@ Helps answer: "How much did this agent generation run cost?"
 
 import logging
 from collections import defaultdict
+from contextvars import ContextVar
+
+# ContextVar to track the current task ID in asynchronous tasks
+current_task_id: ContextVar[str] = ContextVar("current_task_id", default="")
 
 logger = logging.getLogger(__name__)
 
 # Model input/output token pricing per 1M tokens (verified NVIDIA NIM / OpenAI standard rates)
 MODEL_PRICING = {
-    # 70B parameter models
+    # 70B+ / reasoning / code models
     "meta/llama-3.3-70b-instruct": {"input": 0.70, "output": 0.90},
-    "qwen/qwen3-coder-480b-a35b-instruct": {"input": 1.20, "output": 1.60},
+    "mistralai/mistral-large-3-675b-instruct-2512": {"input": 2.00, "output": 6.00},
+    "qwen/qwen3.5-397b-a17b": {"input": 1.20, "output": 1.60},
+    "qwen/qwen3-next-80b-a3b-instruct": {"input": 1.20, "output": 1.60},
     
     # 8B parameter / lightweight models
     "meta/llama-3.1-8b-instruct": {"input": 0.10, "output": 0.10},

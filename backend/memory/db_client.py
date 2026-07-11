@@ -15,6 +15,10 @@ from config import get_settings
 
 logger = logging.getLogger(__name__)
 
+import builtins
+builtins._use_mock_db = False
+builtins.logging = logging
+
 # ─── Engine ──────────────────────────────────────────────────────
 _engine = None
 _session_factory = None
@@ -38,7 +42,7 @@ def get_engine():
         settings = get_settings()
         if not settings.database_url:
             _use_mock_db = True
-            logger.warning("DATABASE_URL is not configured. Using in-memory Mock Database.")
+            logging.getLogger(__name__).warning("DATABASE_URL is not configured. Using in-memory Mock Database.")
             return None
         _engine = create_async_engine(
             settings.database_url,
@@ -65,10 +69,24 @@ def get_session_factory():
 
 
 async def get_db_session() -> AsyncSession:
+    import logging
     global _use_mock_db
-    if _use_mock_db:
-        yield None
-        return
+    try:
+        if _use_mock_db:
+            yield None
+            return
+    except NameError as ne:
+        import sys
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"NameError: _use_mock_db undefined! Globals keys: {list(globals().keys())}")
+        logger.error(f"__file__ is: {__file__}")
+        try:
+            with open(__file__, "r", encoding="utf-8") as f:
+                logger.error(f"File content: {f.read(2000)}")
+        except Exception as e:
+            logger.error(f"Failed to read __file__: {e}")
+        raise ne
     try:
         factory = get_session_factory()
         if factory is None:
@@ -79,11 +97,12 @@ async def get_db_session() -> AsyncSession:
             yield session
     except Exception:
         _use_mock_db = True
-        logger.warning("⚠️ Falling back to in-memory Mock Database")
+        logging.getLogger(__name__).warning("⚠️ Falling back to in-memory Mock Database")
         yield None
 
 
 async def ping_db() -> bool:
+    import logging
     global _use_mock_db
     try:
         factory = get_session_factory()
@@ -96,7 +115,7 @@ async def ping_db() -> bool:
         return True
     except Exception:
         _use_mock_db = True
-        logger.warning("⚠️ PostgreSQL not reachable. Falling back to in-memory Mock Database.")
+        logging.getLogger(__name__).warning("⚠️ PostgreSQL not reachable. Falling back to in-memory Mock Database.")
         return False
 
 
@@ -108,7 +127,7 @@ async def close_db() -> None:
         except Exception:
             pass
         _engine = None
-        logger.info("Database connection closed")
+        logging.getLogger(__name__).info("Database connection closed")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1117,6 +1136,7 @@ async def init_db_tables() -> None:
             """))
             
             # Create memories table (try pgvector first, fallback to standard TEXT)
+            await session.commit()
             try:
                 await session.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
                 await session.execute(text("""
@@ -1134,6 +1154,7 @@ async def init_db_tables() -> None:
                 """))
             except Exception as e:
                 logger.warning("Could not initialize memories table with pgvector, trying fallback: %s", e)
+                await session.rollback()
                 await session.execute(text("""
                     CREATE TABLE IF NOT EXISTS memories (
                         id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),

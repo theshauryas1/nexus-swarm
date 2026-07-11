@@ -24,6 +24,10 @@ from security_utils import (
     sanitize_llm_output,
     record_token_usage,
 )
+from llm_guardrails import (
+    check_and_sanitize_input,
+    check_and_sanitize_output,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +35,15 @@ logger = logging.getLogger(__name__)
 #  VERIFIED MODEL IDs  (live-tested — only these returned 200)
 # ─────────────────────────────────────────────────────────────
 
-# Reasoning / Orchestration  (70B, strong reasoning)
-LLAMA_70B      = "meta/llama-3.3-70b-instruct"          # HeadOrchestrator, SecurityManager
+# Reasoning / Orchestration  (675B MoE, strong reasoning)
+MISTRAL_LARGE  = "mistralai/mistral-large-3-675b-instruct-2512" # HeadOrchestrator, SecurityManager
+LLAMA_70B      = MISTRAL_LARGE                          # Keep variable for compatibility
 
 # Fast / Agentic  (DeepSeek V4 Flash — confirmed OK)
 DEEPSEEK_FLASH = "deepseek-ai/deepseek-v4-flash"        # Managers, Diagnostics, Reliability
 
-# Code Generation  (480B MoE coder — confirmed OK)
-QWEN_CODER     = "qwen/qwen3-coder-480b-a35b-instruct"  # All coding agents
+# Code Generation  (397B MoE coder — confirmed OK)
+QWEN_CODER     = "qwen/qwen3.5-397b-a17b"               # All coding agents
 
 # General Purpose  (Llama 4 Maverick — confirmed OK)
 LLAMA4         = "meta/llama-4-maverick-17b-128e-instruct"  # Memory, Validators, Planning
@@ -214,9 +219,15 @@ async def call_agent_llm(
 
     client = _get_client()
 
+    # ── LLM Guardrail Check: Input
+    guard_in = check_and_sanitize_input(prompt)
+    if not guard_in.is_safe:
+        logger.error(f"[{agent_name}] LLM Input Guardrail blocked request: {guard_in.reason}")
+        raise ValueError(guard_in.reason)
+
     # ── Security: sanitize user-supplied prompt before forwarding
     # (prevents prompt injection; system prompt is trusted internal text)
-    safe_prompt = sanitize_llm_input(prompt)
+    safe_prompt = sanitize_llm_input(guard_in.content)
 
     messages = []
     if system:
@@ -248,12 +259,25 @@ async def call_agent_llm(
             record_token_usage("system", int(tokens_used))
 
         # ── LLMOps: record task-level cost/token billing
-        if task_id and (prompt_tokens or completion_tokens):
+        resolved_task_id = task_id
+        if not resolved_task_id:
+            try:
+                from memory.cost_tracker import current_task_id
+                resolved_task_id = current_task_id.get("")
+            except Exception:
+                pass
+
+        if resolved_task_id and (prompt_tokens or completion_tokens):
             from memory.cost_tracker import record_task_llm_usage
-            record_task_llm_usage(task_id, model, prompt_tokens, completion_tokens)
+            record_task_llm_usage(resolved_task_id, model, prompt_tokens, completion_tokens)
+
+        # ── LLM Guardrail Check: Output
+        guard_out = check_and_sanitize_output(content)
+        if "Hallucination Warning" in guard_out.reason:
+            logger.warning(f"[{agent_name}] LLM Output Guardrail warning: {guard_out.reason}")
 
         # ── Security: sanitize LLM output before returning (XSS defence-in-depth)
-        return sanitize_llm_output(content)
+        return sanitize_llm_output(guard_out.content)
 
     except Exception as e:
         logger.error(f"[{agent_name}] {provider} call failed: {e}")

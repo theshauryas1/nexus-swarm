@@ -47,9 +47,13 @@ gcloud storage buckets create "gs://${BUCKET_NAME}" \
     --location="$REGION" || echo "⚠️ Bucket already exists, skipping..."
 
 # 5. Create Cloud SQL PostgreSQL Instance
-echo "🔑 Enter database master password for '$DB_USER':"
-read -sp "Password: " DB_PASS
-echo ""
+if [ -z "$DB_PASS" ]; then
+    echo "🔑 Enter database master password for '$DB_USER':"
+    read -sp "Password: " DB_PASS
+    echo ""
+else
+    echo "✅ Using database master password from environment (DB_PASS)"
+fi
 
 echo "🛢️ Creating Cloud SQL PostgreSQL instance (db-f1-micro, PostgreSQL 15)..."
 gcloud sql instances create "$INSTANCE_NAME" \
@@ -63,9 +67,18 @@ gcloud sql databases create "$DB_NAME" \
     --instance="$INSTANCE_NAME" || echo "⚠️ Database already exists..."
 
 # 6. Configure Secrets in Secret Manager
-echo "🔑 Enter your NVIDIA API Key:"
-read -sp "API Key: " NVIDIA_KEY
-echo ""
+if [ -z "$NVIDIA_KEY" ]; then
+    if [ -n "$NVIDIA_API_KEY" ]; then
+        NVIDIA_KEY="$NVIDIA_API_KEY"
+        echo "✅ Using NVIDIA API Key from environment (NVIDIA_API_KEY)"
+    else
+        echo "🔑 Enter your NVIDIA API Key:"
+        read -sp "API Key: " NVIDIA_KEY
+        echo ""
+    fi
+else
+    echo "✅ Using NVIDIA API Key from environment (NVIDIA_KEY)"
+fi
 
 echo "🔒 Creating secret in Secret Manager for NVIDIA API Key..."
 gcloud secrets create nexusswarm-nvidia-key --replication-policy="automatic" || echo "⚠️ Secret already exists..."

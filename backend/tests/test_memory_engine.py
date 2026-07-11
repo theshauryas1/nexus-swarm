@@ -24,6 +24,10 @@ def test_pseudo_embedding_properties():
 
 @pytest.mark.asyncio
 async def test_add_and_search_memories():
+    # Force mock mode in tests to isolate test execution from live DB connections
+    import memory.db_client
+    memory.db_client._use_mock_db = True
+
     # Clear mock memories first (since we run in mock mode in tests)
     from memory.db_client import _MOCK_MEMORIES
     _MOCK_MEMORIES.clear()

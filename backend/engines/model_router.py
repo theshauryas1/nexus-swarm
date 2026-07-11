@@ -11,21 +11,21 @@ logger = logging.getLogger(__name__)
 
 # Verified model IDs matching llm_factory.py
 MODEL_REGISTRY = {
-    "qwen/qwen3-coder-480b-a35b-instruct": {
-        "model_id": "qwen/qwen3-coder-480b-a35b-instruct",
+    "qwen/qwen3.5-397b-a17b": {
+        "model_id": "qwen/qwen3.5-397b-a17b",
         "strengths": ["coding", "debugging", "refactoring"],
         "task_types": ["code_generation", "bug_fix", "refactoring", "testing"],
-        "latency_ms": 1200,
-        "cost_per_1k_tokens": 0.0005,
+        "latency_ms": 12000,
+        "cost_per_1k_tokens": 0.0012,
         "context_window": 128000,
         "provider": "nvidia_nim"
     },
-    "meta/llama-3.3-70b-instruct": {
-        "model_id": "meta/llama-3.3-70b-instruct",
+    "mistralai/mistral-large-3-675b-instruct-2512": {
+        "model_id": "mistralai/mistral-large-3-675b-instruct-2512",
         "strengths": ["reasoning", "planning", "analysis", "security"],
         "task_types": ["architecture", "task_decomposition", "planning", "security_scan"],
-        "latency_ms": 1800,
-        "cost_per_1k_tokens": 0.0007,
+        "latency_ms": 1200,
+        "cost_per_1k_tokens": 0.0020,
         "context_window": 128000,
         "provider": "nvidia_nim"
     },
@@ -59,14 +59,14 @@ MODEL_REGISTRY = {
 }
 
 DEFAULT_MODELS = {
-    "code_generation": "qwen/qwen3-coder-480b-a35b-instruct",
-    "bug_fix": "qwen/qwen3-coder-480b-a35b-instruct",
-    "refactoring": "qwen/qwen3-coder-480b-a35b-instruct",
-    "testing": "qwen/qwen3-coder-480b-a35b-instruct",
-    "architecture": "meta/llama-3.3-70b-instruct",
-    "task_decomposition": "meta/llama-3.3-70b-instruct",
+    "code_generation": "qwen/qwen3.5-397b-a17b",
+    "bug_fix": "qwen/qwen3.5-397b-a17b",
+    "refactoring": "qwen/qwen3.5-397b-a17b",
+    "testing": "qwen/qwen3.5-397b-a17b",
+    "architecture": "mistralai/mistral-large-3-675b-instruct-2512",
+    "task_decomposition": "mistralai/mistral-large-3-675b-instruct-2512",
     "planning": "meta/llama-4-maverick-17b-128e-instruct",
-    "security_scan": "meta/llama-3.3-70b-instruct",
+    "security_scan": "mistralai/mistral-large-3-675b-instruct-2512",
     "validation": "meta/llama-4-maverick-17b-128e-instruct",
     "diagnostics": "deepseek-ai/deepseek-v4-flash",
     "coordination": "meta/llama-3.1-8b-instruct",

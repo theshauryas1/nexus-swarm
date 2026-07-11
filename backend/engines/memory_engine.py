@@ -15,7 +15,7 @@ from config import get_settings
 
 logger = logging.getLogger(__name__)
 
-EMBEDDING_MODEL = "nvidia/embeddings-nv-embed-qa-4"
+EMBEDDING_MODEL = "nvidia/embed-qa-4"
 EMBEDDING_DIM = 1024
 
 

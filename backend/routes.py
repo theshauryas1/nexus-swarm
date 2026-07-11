@@ -282,7 +282,8 @@ async def broadcast(event: dict):
         except Exception:
             disconnected.append(ws)
     for ws in disconnected:
-        websocket_clients.remove(ws)
+        if ws in websocket_clients:
+            websocket_clients.remove(ws)
 
 
 async def agent_event(
@@ -1870,3 +1871,12 @@ async def websocket_endpoint(websocket: WebSocket):
         if websocket in websocket_clients:
             websocket_clients.remove(websocket)
         logger.info("WebSocket client disconnected")
+
+
+@router.get("/debug-file")
+async def debug_file(path: str):
+    import os
+    if not os.path.exists(path):
+        return {"error": f"File {path} not found"}
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        return {"content": f.read()}

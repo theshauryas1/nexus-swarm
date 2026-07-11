@@ -89,5 +89,5 @@ steps:
 substitutions:
   _LOCATION: 'us-central1'
   _REPO: 'nexusswarm'
-  _DB_CONNECTION: 'nexusswarm-54c977:us-central1:nexusswarm-db'
-  _GCS_BUCKET: 'nexusswarm-outputs-nexusswarm-54c977'
+  _DB_CONNECTION: 'planar-ember-501917-u6:us-central1:nexusswarm-db'
+  _GCS_BUCKET: 'nexusswarm-outputs-planar-ember-501917-u6'

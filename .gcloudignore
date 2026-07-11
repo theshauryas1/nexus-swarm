@@ -1,0 +1,30 @@
+# .gcloudignore
+# This file specifies files and directories that should not be uploaded to Google Cloud Build.
+
+.git
+.gitignore
+.gcloudignore
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.vscode
+.idea
+node_modules
+dist
+build
+backend/.venv
+frontend/node_modules
+frontend/dist
+workspace
+backend/workspace
+*.log
+*.zip
+*.tar.gz
+*.db
+.env
+backend/.env
+frontend/.env
