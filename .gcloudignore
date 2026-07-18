@@ -31,3 +31,8 @@ backend/workspace
 **/.env.*
 *.key
 **/*.key
+
+# Personal / conceptual notes
+learning_notes.md
+interview_notes.md
+

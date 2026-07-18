@@ -182,22 +182,22 @@ The PostgreSQL database now emphasizes **semantic memory storage** alongside tra
 * **`agent_logs`**: Immutable stream of all agent interactions (with embeddings for search)
 * **`task_outputs`**: Generated artifacts linked to tasks
 * **`memories`**: **NEW** - Long-term memory entries with vector embeddings
-    * `id`: Unique identifier
-    * `content`: The memory text (decision, conversation, etc.)
-    * `embedding`: Vector representation for semantic search
-    * `memory_type`: architecture | conversation | pr_review | coding_standard | etc.
-    * `source_task_id`: Originating task (if applicable)
-    * `confidence_score`: Quality/reliability metric
-    * `access_count`: Usage frequency for caching
-    * `created_at`, `updated_at`: Timestamps
+    - `id`: Unique identifier
+    - `content`: The memory text (decision, conversation, etc.)
+    - `embedding`: Vector representation for semantic search
+    - `memory_type`: architecture | conversation | pr_review | coding_standard | etc.
+    - `source_task_id`: Originating task (if applicable)
+    - `confidence_score`: Quality/reliability metric
+    - `access_count`: Usage frequency for caching
+    - `created_at`, `updated_at`: Timestamps
 * **`model_performance`**: **NEW** - Tracks LLM effectiveness for intelligent routing
-    * `model_name`: Identifier for the LLM
-    * `task_type`: Category of task (coding, reasoning, etc.)
-    * `success_rate`: Percentage of successful outcomes
-    * `avg_latency`: Average response time
-    * `hallucination_rate`: Frequency of inaccurate outputs
-    * `cost_per_token`: Estimated usage cost
-    * `last_updated`: Timestamp for freshness
+    - `model_name`: Identifier for the LLM
+    - `task_type`: Category of task (coding, reasoning, etc.)
+    - `success_rate`: Percentage of successful outcomes
+    - `avg_latency`: Average response time
+    - `hallucination_rate`: Frequency of inaccurate outputs
+    - `cost_per_token`: Estimated usage cost
+    - `last_updated`: Timestamp for freshness
 
 ### 2. GCS and Workspace File Storage
 Unchanged from v1 but now integrated through the **File System MCP Server**:
@@ -237,39 +237,18 @@ MODEL_REGISTRY = {
 async def select_optimal_model(task_type: str, requirements: Dict) -> str:
     """
     Intelligently select the best model for a given task type and requirements.
-    
-    Args:
-        task_type: Category of work (coding, reasoning, testing, etc.)
-        requirements: Dict containing constraints like max_latency, min_accuracy, etc.
-        
-    Returns:
-        Model ID string that best matches the criteria
     """
-    # 1. Filter models by task_type compatibility
     compatible_models = [
         (model_id, metadata) for model_id, metadata in MODEL_REGISTRY.items()
         if task_type in metadata["task_types"]
     ]
-    
-    # 2. Apply requirement filters (latency, cost, etc.)
     filtered_models = apply_requirements(compatible_models, requirements)
-    
-    # 3. Score remaining models based on performance history
     scored_models = [
         (model_id, calculate_model_score(model_id, task_type))
         for model_id, _ in filtered_models
     ]
-    
-    # 4. Return highest scoring model
     return max(scored_models, key=lambda x: x[1])[0] if scored_models else DEFAULT_MODEL
 ```
-
-### Key Benefits:
-- **Automatic Optimization**: System learns which models work best for specific tasks
-- **Cost Efficiency**: Uses cheaper/faster models when quality requirements are met
-- **Quality Assurance**: Selects higher-capability models for complex reasoning tasks
-- **Future-Proofing**: Automatically incorporates new models as they become available
-- **Fallback Resilience**: Graceful degradation when preferred models are unavailable
 
 ---
 
@@ -298,7 +277,7 @@ Enhanced message structure for v2:
   "model": "qwen/qwen3-coder-480b-a35b-instruct",
   "level": "worker",
   "pipeline": "engineering",
-  "memory_referenced": ["mem_123", "mem_456"],  // Memories used in this step
+  "memory_referenced": ["mem_123", "mem_456"],
   "model_selection_reason": "Selected for coding task with low latency requirement",
   "ts": "2026-06-17T15:37:41Z"
 }
@@ -332,19 +311,11 @@ The v2 frontend provides role-based views for different stakeholders:
 - **Workflow Efficiency**: Average completion times, bottleneck identification
 - **Quality Gates**: Test coverage, security scan results, review approval rates
 - **Resource Utilization**: Token consumption, compute costs, concurrent workflows
-- **Memory EngineStats**: Memories stored, accessed, and their impact on quality
-
-### Shared Components
-- **Unified AgentPanel**: Shows agent status, current task, and model being used
-- **TaskPanel**: Submit new tasks via form or GitHub issue integration
-- **MetricsPanel**: Real-time graphs and alerts for system health
-- **Memory Explorer**: Browse and search long-term memories with semantic similarity
+- **Memory Engine Stats**: Memories stored, accessed, and their impact on quality
 
 ---
 
 ## 🚀 MVP Approach & GitHub-Centric Workflow
-
-Following the user's guidance, the initial implementation focuses on delivering value quickly:
 
 ### Phase 1: Core Trio (MVP)
 1. **GitHub Issue Created** → Triggers Nexus Swarm activation
@@ -358,18 +329,6 @@ Following the user's guidance, the initial implementation focuses on delivering 
 - Add **Security Agent** for vulnerability scanning
 - Add **DevOps Agent** for deployment preparation
 - Add **Documentation Agent** for API/user guide updates
-
-### Phase 3: Human-Agent Collaboration
-- Implement approval gates for dramatic changes
-- Add commentary and feedback loops between humans and agents
-- Enable iterative refinement based on human review
-
-### Benefits of GitHub-First Approach:
-- Immediate value for development teams
-- Familiar workflow reduces adoption friction
-- Leverages existing code review and CI/CD infrastructure
-- Demonstrates tangible outcomes (actual pull requests)
-- Easy rollback and audit trails through Git history
 
 ---
 
@@ -390,54 +349,3 @@ To verify code changes locally:
    npm run build
    npm run type-check
    ```
-
-3. **End-to-End Workflow** (requires GitHub token):
-   ```bash
-   # Simulate GitHub webhook payload
-   curl -X POST http://localhost:8000/webhook/github \
-        -H "Content-Type: application/json" \
-        -d '{"action": "opened", "issue": {"title": "Add user login", "body": "..."}}'
-   ```
-
-4. **Memory Engine Validation**:
-   ```bash
-   # Test semantic search
-   curl "http://localhost:8000/memory/search?q=authentication+patterns"
-   ```
-
-5. **Model Router Benchmark**:
-   ```bash
-   # Test model selection logic
-   curl -X POST http://localhost:8000/models/benchmark \
-        -H "Content-Type: application/json" \
-        -d '{"task_type": "code_generation", "requirements": {"max_latency": 1500}}'
-   ```
-
----
-
-## 📈 Future Enhancements (Post-MVP)
-
-1. **Neo4j Migration**: Move memory storage to graph database for relationship traversal
-2. **Advanced Conflict Resolution**: Implement voting systems and consensus algorithms
-3. **Specialized Model Fine-Tuning**: Train domain-specific models on project history
-4. **Cross-Project Knowledge Sharing**: Securely anonymize and share learnings across organizations
-5. **Predictive Analytics**: Forecast task duration, resource needs, and risk factors
-6. **Multi-Modal Agents**: Extend agents to handle images, diagrams, and architectural drawings
-7. **Edge Computing Support**: Deploy lightweight agents to developer workstations for local assistance
-
----
-
-## 🔑 Key Differentiators from V1
-
-| Feature | NexusSwarm v1 | NexusSwarm v2 |
-|---------|---------------|---------------|
-| **Orchestration** | Sequential pipeline | Dynamic agent collaboration |
-| **Model Selection** | Static agent mapping | Intelligent task-based routing |
-| **Memory System** | Task persistence | Semantic long-term memory |
-| **Integration** | Internal tool execution | MCP server architecture |
-| **Workflow** | Internal task submission | GitHub issue/PR driven |
-| **Analytics** | Basic pipeline tracking | Comprehensive metrics & learning |
-| **Extensibility** | Fixed agent types | Pluggable agent architecture |
-| **Governance** | Hierarchical approval | Consensus-based conflict resolution |
-
-NexusSwarm v2 transforms from an internal AI agent framework into a **true AI engineering operating system** that integrates seamlessly with existing development workflows while continuously learning and improving from every interaction.

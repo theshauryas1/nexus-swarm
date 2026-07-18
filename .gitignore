@@ -47,3 +47,8 @@ backend/workspace/*
 # ─── Logs ────────────────────────────────────────────────────────
 *.log
 logs/
+
+# ─── Personal/conceptual notes ──────────────────────────────────
+learning_notes.md
+interview_notes.md
+
