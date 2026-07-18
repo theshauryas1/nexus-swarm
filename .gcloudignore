@@ -26,5 +26,8 @@ backend/workspace
 *.tar.gz
 *.db
 .env
-backend/.env
-frontend/.env
+.env.*
+**/.env
+**/.env.*
+*.key
+**/*.key

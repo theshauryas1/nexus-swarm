@@ -34,7 +34,7 @@ steps:
           --allow-unauthenticated \
           --add-cloudsql-instances=${_DB_CONNECTION} \
           --set-env-vars="^;^APP_ENV=production;GCS_BUCKET=${_GCS_BUCKET};DATABASE_URL=postgresql+asyncpg://postgres:$$DB_PASSWORD@/nexusswarm?host=/cloudsql/${_DB_CONNECTION};CORS_ALLOWED_ORIGINS=$${CORS_ORIGINS};CORS_ALLOWED_METHODS=GET,POST,OPTIONS;CORS_ALLOWED_HEADERS=Content-Type,Authorization;TRUSTED_HOSTS=localhost,127.0.0.1,testserver,nexusswarm-backend-titbewudzq-uc.a.run.app,nexusswarm-backend-537381825142.us-central1.run.app" \
-          --set-secrets="NVIDIA_API_KEY=nexusswarm-nvidia-key:latest,DB_PASSWORD=nexusswarm-db-pass:latest"
+          --set-secrets="NVIDIA_API_KEY=nexusswarm-nvidia-key:latest,DB_PASSWORD=nexusswarm-db-pass:latest,GEMINI_API_KEY=nexusswarm-gemini-key:latest"
 
   # ─── 3b. Query Backend Cloud Run URL ──────────────────────────────────
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'

@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     nim_manager_model: str = "qwen/qwen2.5-coder-32b-instruct"
     nim_worker_model: str = "nv-mistralai/mistral-nemo-12b-instruct"
 
+    # ── GEMINI ─────────────────────────────────────────────────────
+    gemini_api_key: str = ""
+
     # ── Azure OpenAI ───────────────────────────────────────────────
     azure_openai_api_key: str = ""
     azure_openai_endpoint: str = ""
