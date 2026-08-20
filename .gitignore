@@ -31,6 +31,7 @@ frontend/.vite/
 .docker/
 
 # ─── IDE ─────────────────────────────────────────────────────────
+.claude/
 .vscode/settings.json
 .vscode/
 .clangd
