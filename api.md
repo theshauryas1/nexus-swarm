@@ -64,7 +64,7 @@ Submits a task for the Swarm to decompose and build.
 ```
 
 ### 3.2. `GET /agents`
-Returns active model allocations for each agent role.
+Returns active model allocations for each agent role with automatic fallback routing.
 
 **Response Example:**
 ```json
@@ -74,19 +74,19 @@ Returns active model allocations for each agent role.
     {
       "name": "HeadOrchestrator",
       "level": "orchestrator",
-      "model": "deepseek-ai/deepseek-v4-flash",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
       "provider": "NVIDIA NIM"
     },
     {
       "name": "EngineeringManager",
       "level": "manager",
-      "model": "qwen/qwen2.5-coder-32b-instruct",
+      "model": "nvidia/nemotron-3-nano-30b-a3b",
       "provider": "NVIDIA NIM"
     },
     {
       "name": "BackendAgent",
       "level": "worker",
-      "model": "nv-mistralai/mistral-nemo-12b-instruct",
+      "model": "meta/llama-3.2-11b-vision-instruct",
       "provider": "NVIDIA NIM"
     }
   ]

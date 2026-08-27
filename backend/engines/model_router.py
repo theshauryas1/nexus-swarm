@@ -1,6 +1,6 @@
 """
-model_router.py — Intelligent Model Selection Engine
-Selects optimal LLM dynamically based on task type, requirements, and performance.
+model_router.py — Intelligent Model Selection & Dynamic Fallback Engine
+Selects optimal LLMs dynamically with automatic multi-model fallback chains.
 """
 
 import logging
@@ -9,137 +9,204 @@ from memory.db_client import get_db_session, ModelPerformanceDB
 
 logger = logging.getLogger(__name__)
 
-# Verified model IDs matching llm_factory.py
+# ─────────────────────────────────────────────────────────────
+#  LIVE VERIFIED MODEL REGISTRY (NVIDIA NIM 2026)
+# ─────────────────────────────────────────────────────────────
 MODEL_REGISTRY = {
-    "qwen/qwen3.5-397b-a17b": {
-        "model_id": "qwen/qwen3.5-397b-a17b",
-        "strengths": ["coding", "debugging", "refactoring"],
-        "task_types": ["code_generation", "bug_fix", "refactoring", "testing"],
-        "latency_ms": 12000,
-        "cost_per_1k_tokens": 0.0012,
-        "context_window": 128000,
-        "provider": "nvidia_nim"
-    },
-    "mistralai/mistral-large-3-675b-instruct-2512": {
-        "model_id": "mistralai/mistral-large-3-675b-instruct-2512",
-        "strengths": ["reasoning", "planning", "analysis", "security"],
-        "task_types": ["architecture", "task_decomposition", "planning", "security_scan"],
-        "latency_ms": 1200,
-        "cost_per_1k_tokens": 0.0020,
-        "context_window": 128000,
-        "provider": "nvidia_nim"
-    },
-    "meta/llama-4-maverick-17b-128e-instruct": {
-        "model_id": "meta/llama-4-maverick-17b-128e-instruct",
-        "strengths": ["general", "validation", "planning"],
-        "task_types": ["validation", "planning", "diagnostics"],
-        "latency_ms": 900,
-        "cost_per_1k_tokens": 0.0002,
-        "context_window": 128000,
-        "provider": "nvidia_nim"
-    },
-    "meta/llama-3.1-8b-instruct": {
-        "model_id": "meta/llama-3.1-8b-instruct",
-        "strengths": ["fast", "lightweight", "coordination"],
-        "task_types": ["coordination", "summarization", "validation"],
-        "latency_ms": 400,
+    "meta/llama-3.2-11b-vision-instruct": {
+        "model_id": "meta/llama-3.2-11b-vision-instruct",
+        "strengths": ["coding", "debugging", "refactoring", "testing", "fast_inference"],
+        "task_types": ["code_generation", "bug_fix", "refactoring", "testing", "validation", "coordination"],
+        "latency_ms": 600,
         "cost_per_1k_tokens": 0.0001,
         "context_window": 128000,
         "provider": "nvidia_nim"
     },
-    "deepseek-ai/deepseek-v4-flash": {
-        "model_id": "deepseek-ai/deepseek-v4-flash",
-        "strengths": ["fast", "agentic", "diagnostics"],
-        "task_types": ["diagnostics", "coordination", "reliability"],
-        "latency_ms": 300,
+    "nvidia/nemotron-3-super-120b-a12b": {
+        "model_id": "nvidia/nemotron-3-super-120b-a12b",
+        "strengths": ["reasoning", "planning", "analysis", "security", "architecture", "orchestration"],
+        "task_types": ["architecture", "task_decomposition", "planning", "security_scan", "code_generation"],
+        "latency_ms": 1500,
+        "cost_per_1k_tokens": 0.0008,
+        "context_window": 128000,
+        "provider": "nvidia_nim"
+    },
+    "nvidia/nemotron-3-nano-30b-a3b": {
+        "model_id": "nvidia/nemotron-3-nano-30b-a3b",
+        "strengths": ["fast", "lightweight", "coordination", "diagnostics", "summarization"],
+        "task_types": ["coordination", "summarization", "validation", "diagnostics", "reliability", "planning"],
+        "latency_ms": 380,
         "cost_per_1k_tokens": 0.00008,
         "context_window": 64000,
+        "provider": "nvidia_nim"
+    },
+    "nvidia/nemotron-3.5-lightning-30b-a3b": {
+        "model_id": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "strengths": ["deep_reasoning", "refactoring", "code_generation"],
+        "task_types": ["refactoring", "code_generation", "planning", "validation"],
+        "latency_ms": 2500,
+        "cost_per_1k_tokens": 0.0002,
+        "context_window": 128000,
+        "provider": "nvidia_nim"
+    },
+    "deepseek-ai/deepseek-v4-pro-0813": {
+        "model_id": "deepseek-ai/deepseek-v4-pro-0813",
+        "strengths": ["agentic", "diagnostics", "reliability", "reasoning"],
+        "task_types": ["diagnostics", "reliability", "coordination", "validation"],
+        "latency_ms": 2000,
+        "cost_per_1k_tokens": 0.0002,
+        "context_window": 128000,
         "provider": "nvidia_nim"
     }
 }
 
-DEFAULT_MODELS = {
-    "code_generation": "qwen/qwen3.5-397b-a17b",
-    "bug_fix": "qwen/qwen3.5-397b-a17b",
-    "refactoring": "qwen/qwen3.5-397b-a17b",
-    "testing": "qwen/qwen3.5-397b-a17b",
-    "architecture": "mistralai/mistral-large-3-675b-instruct-2512",
-    "task_decomposition": "mistralai/mistral-large-3-675b-instruct-2512",
-    "planning": "meta/llama-4-maverick-17b-128e-instruct",
-    "security_scan": "mistralai/mistral-large-3-675b-instruct-2512",
-    "validation": "meta/llama-4-maverick-17b-128e-instruct",
-    "diagnostics": "deepseek-ai/deepseek-v4-flash",
-    "coordination": "meta/llama-3.1-8b-instruct",
-    "reliability": "deepseek-ai/deepseek-v4-flash",
-    "default": "deepseek-ai/deepseek-v4-flash"
+# Ordered Fallback Chains by Domain
+TASK_FALLBACK_CHAINS: Dict[str, List[str]] = {
+    # High-reasoning & security domain
+    "architecture": [
+        "nvidia/nemotron-3-super-120b-a12b",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "meta/llama-3.2-11b-vision-instruct",
+    ],
+    "task_decomposition": [
+        "nvidia/nemotron-3-super-120b-a12b",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "meta/llama-3.2-11b-vision-instruct",
+    ],
+    "security_scan": [
+        "nvidia/nemotron-3-super-120b-a12b",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "meta/llama-3.2-11b-vision-instruct",
+    ],
+    "planning": [
+        "nvidia/nemotron-3-super-120b-a12b",
+        "nvidia/nemotron-3-nano-30b-a3b",
+        "meta/llama-3.2-11b-vision-instruct",
+    ],
+
+    # Code generation & testing domain
+    "code_generation": [
+        "meta/llama-3.2-11b-vision-instruct",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "nvidia/nemotron-3-super-120b-a12b",
+        "nvidia/nemotron-3-nano-30b-a3b",
+    ],
+    "bug_fix": [
+        "meta/llama-3.2-11b-vision-instruct",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "nvidia/nemotron-3-nano-30b-a3b",
+    ],
+    "refactoring": [
+        "meta/llama-3.2-11b-vision-instruct",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "nvidia/nemotron-3-nano-30b-a3b",
+    ],
+    "testing": [
+        "meta/llama-3.2-11b-vision-instruct",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "nvidia/nemotron-3-nano-30b-a3b",
+    ],
+
+    # Coordination & management domain
+    "coordination": [
+        "nvidia/nemotron-3-nano-30b-a3b",
+        "meta/llama-3.2-11b-vision-instruct",
+        "deepseek-ai/deepseek-v4-pro-0813",
+    ],
+    "summarization": [
+        "nvidia/nemotron-3-nano-30b-a3b",
+        "meta/llama-3.2-11b-vision-instruct",
+    ],
+
+    # Diagnostics, validation & reliability domain
+    "diagnostics": [
+        "nvidia/nemotron-3-nano-30b-a3b",
+        "deepseek-ai/deepseek-v4-pro-0813",
+        "meta/llama-3.2-11b-vision-instruct",
+    ],
+    "validation": [
+        "meta/llama-3.2-11b-vision-instruct",
+        "nvidia/nemotron-3-nano-30b-a3b",
+        "deepseek-ai/deepseek-v4-pro-0813",
+    ],
+    "reliability": [
+        "nvidia/nemotron-3-nano-30b-a3b",
+        "deepseek-ai/deepseek-v4-pro-0813",
+        "meta/llama-3.2-11b-vision-instruct",
+    ],
+    "default": [
+        "meta/llama-3.2-11b-vision-instruct",
+        "nvidia/nemotron-3-nano-30b-a3b",
+        "nvidia/nemotron-3-super-120b-a12b",
+    ]
 }
+
+DEFAULT_MODELS = {
+    "code_generation": "meta/llama-3.2-11b-vision-instruct",
+    "bug_fix": "meta/llama-3.2-11b-vision-instruct",
+    "refactoring": "meta/llama-3.2-11b-vision-instruct",
+    "testing": "meta/llama-3.2-11b-vision-instruct",
+    "architecture": "nvidia/nemotron-3-super-120b-a12b",
+    "task_decomposition": "nvidia/nemotron-3-super-120b-a12b",
+    "planning": "nvidia/nemotron-3-super-120b-a12b",
+    "security_scan": "nvidia/nemotron-3-super-120b-a12b",
+    "validation": "meta/llama-3.2-11b-vision-instruct",
+    "diagnostics": "nvidia/nemotron-3-nano-30b-a3b",
+    "coordination": "nvidia/nemotron-3-nano-30b-a3b",
+    "reliability": "nvidia/nemotron-3-nano-30b-a3b",
+    "default": "meta/llama-3.2-11b-vision-instruct"
+}
+
+
+def get_candidate_models_for_task(task_type: str) -> List[str]:
+    """Returns the ordered list of fallback models for a given task type."""
+    return TASK_FALLBACK_CHAINS.get(task_type, TASK_FALLBACK_CHAINS["default"])
 
 
 async def select_optimal_model(task_type: str, requirements: Optional[Dict[str, Any]] = None) -> str:
     """
     Intelligently select the best model for a given task type and requirements.
-    
-    Args:
-        task_type: Category of work (coding, reasoning, testing, etc.)
-        requirements: Optional dictionary containing constraints like:
-            - max_latency_ms (int)
-            - max_cost_per_token (float)
-            - min_context_window (int)
-            - min_success_rate (float)
-            
-    Returns:
-        The optimal model ID string.
     """
     requirements = requirements or {}
+    candidates = get_candidate_models_for_task(task_type)
     
-    # 1. Filter models by task_type compatibility (fallback to default mappings if no custom types matched)
-    compatible_models = [
-        meta for model_id, meta in MODEL_REGISTRY.items()
-        if task_type in meta["task_types"]
-    ]
-    
-    if not compatible_models:
-        # If task type doesn't match any registered category, check if it maps to generic categories
-        # E.g., if agent requests a role we map to default
-        fallback_model = DEFAULT_MODELS.get(task_type, DEFAULT_MODELS["default"])
-        logger.info(f"No direct model category match for task_type '{task_type}'. Falling back to default: {fallback_model}")
-        return fallback_model
+    if not candidates:
+        return DEFAULT_MODELS.get(task_type, DEFAULT_MODELS["default"])
 
-    # 2. Apply requirement filters (latency, cost, context window)
+    # If requirements specify constraints, filter candidates
     filtered = []
-    for model in compatible_models:
-        model_id = model["model_id"]
-        
-        # Max latency constraint
+    for model_id in candidates:
+        model = MODEL_REGISTRY.get(model_id)
+        if not model:
+            continue
+            
         if "max_latency_ms" in requirements and model["latency_ms"] > requirements["max_latency_ms"]:
             continue
             
-        # Max cost constraint
-        if "max_cost_per_token" in requirements and model["cost_per_1k_tokens"] / 1000.0 > requirements["max_cost_per_token"]:
+        if "max_cost_per_token" in requirements and (model["cost_per_1k_tokens"] / 1000.0) > requirements["max_cost_per_token"]:
             continue
             
-        # Min context window constraint
         if "min_context_window" in requirements and model["context_window"] < requirements["min_context_window"]:
             continue
             
-        filtered.append(model)
+        filtered.append(model_id)
         
     if not filtered:
-        # If requirements were too strict, log warning and fallback to all compatible models
-        logger.warning(f"No models satisfied requirements {requirements} for task_type '{task_type}'. Ignoring constraints.")
-        filtered = compatible_models
+        # Constraints too strict, use default candidate list
+        filtered = candidates
 
-    # 3. Score models using database historical performance if available
+    # Query historical performance for ranking
     scored_models = []
     async for session in get_db_session():
         db_perf = ModelPerformanceDB(session) if session else None
         
-        for model in filtered:
-            model_id = model["model_id"]
-            
-            # Fetch performance metrics
+        for idx, model_id in enumerate(filtered):
+            model = MODEL_REGISTRY.get(model_id, {})
             success_rate = 100.0
-            avg_latency = float(model["latency_ms"])
+            avg_latency = float(model.get("latency_ms", 1000))
+            
+            # Base priority score based on candidate order (primary candidate gets highest base)
+            base_priority = (len(filtered) - idx) * 100.0
             
             if db_perf:
                 try:
@@ -150,33 +217,22 @@ async def select_optimal_model(task_type: str, requirements: Optional[Dict[str, 
                 except Exception as e:
                     logger.warning(f"Failed to query model performance for {model_id}: {e}")
             
-            # Scoring formula: higher success rate and lower latency is better
-            # Score success rate (0-100) highly, and penalize high latency
-            # success_rate * 0.8 + (10000.0 / (avg_latency + 1.0)) * 0.2
-            score = (success_rate * 0.8) + (10000.0 / (avg_latency + 100.0)) * 0.2
-            
-            # Apply user constraints on success rate if specified
+            score = base_priority + (success_rate * 0.8) + (10000.0 / (avg_latency + 100.0)) * 0.2
             if "min_success_rate" in requirements and success_rate < requirements["min_success_rate"]:
-                score -= 1000.0  # Heavy penalty for violating user threshold
+                score -= 1000.0
                 
             scored_models.append((model_id, score))
         break
     else:
-        # In case async generator did not yield, fall back to registry defaults
-        for model in filtered:
-            score = 100.0 - (model["latency_ms"] / 10.0)
-            scored_models.append((model["model_id"], score))
+        for idx, model_id in enumerate(filtered):
+            base_priority = (len(filtered) - idx) * 100.0
+            scored_models.append((model_id, base_priority))
 
-    if not scored_models:
-        fallback = DEFAULT_MODELS.get(task_type, DEFAULT_MODELS["default"])
-        logger.warning(f"No scored models for task_type '{task_type}'. Returning fallback: {fallback}")
-        return fallback
+    if scored_models:
+        scored_models.sort(key=lambda x: x[1], reverse=True)
+        return scored_models[0][0]
 
-    # Select highest scoring model
-    scored_models.sort(key=lambda x: x[1], reverse=True)
-    selected_model = scored_models[0][0]
-    logger.info(f"Model Router selected '{selected_model}' for task_type '{task_type}' (Score: {scored_models[0][1]:.2f})")
-    return selected_model
+    return candidates[0]
 
 
 async def log_model_outcome(model_name: str, task_type: str, latency_ms: float, success: bool):
@@ -188,7 +244,6 @@ async def log_model_outcome(model_name: str, task_type: str, latency_ms: float, 
     
     async for session in get_db_session():
         if not session:
-            # Running in mock mode
             from memory.db_client import ModelPerformanceDB as MockDB
             db = MockDB(None)
             await db.log_performance(model_name, task_type, latency_ms, success, cost_per_token)

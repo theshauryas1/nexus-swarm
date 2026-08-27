@@ -34,9 +34,9 @@ class Settings(BaseSettings):
     # ── NVIDIA NIM ─────────────────────────────────────────────────
     nvidia_api_key: str = ""
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
-    nim_orchestrator_model: str = "deepseek-ai/deepseek-v4-flash"
-    nim_manager_model: str = "qwen/qwen2.5-coder-32b-instruct"
-    nim_worker_model: str = "nv-mistralai/mistral-nemo-12b-instruct"
+    nim_orchestrator_model: str = "nvidia/nemotron-3-super-120b-a12b"
+    nim_manager_model: str = "nvidia/nemotron-3-nano-30b-a3b"
+    nim_worker_model: str = "meta/llama-3.2-11b-vision-instruct"
 
     # ── GEMINI ─────────────────────────────────────────────────────
     gemini_api_key: str = ""

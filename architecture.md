@@ -40,10 +40,11 @@ HEAD ORCHESTRATOR (Level 1 — Executive)
 The agent layer is built on Microsoft's **AutoGen v0.4** (`autogen-agentchat` and `autogen-ext` packages). 
 
 - **State Persistence**: Redis caches the multi-agent conversation states, allowing runs to be paused, resumed, or inspected.
-- **Model Routing**: Handled in [llm_factory.py](file:///c:/hack/backend/agents/llm_factory.py). The system dynamically routes agent queries to the appropriate NIM model depending on role complexity:
-  - Orchestration & Decomposition → `deepseek-ai/deepseek-v4-flash`
-  - Code Generation → `qwen/qwen2.5-coder-32b-instruct`
-  - Simple Workers & Scanning → `nv-mistralai/mistral-nemo-12b-instruct`
+- **Dynamic Fallback Model Router**: Handled in [model_router.py](file:///c:/hack/backend/engines/model_router.py) and [llm_factory.py](file:///c:/hack/backend/agents/llm_factory.py). The system intelligently routes agent queries with automatic multi-model failover:
+  - Orchestration & Security → `nvidia/nemotron-3-super-120b-a12b` (Fallback: `nemotron-3.5-lightning-30b-a3b`, `meta/llama-3.2-11b-vision-instruct`)
+  - Code Generation & Engineering → `meta/llama-3.2-11b-vision-instruct` (Fallback: `nemotron-3.5-lightning-30b-a3b`, `nemotron-3-nano-30b-a3b`)
+  - Pipeline Management & Coordination → `nvidia/nemotron-3-nano-30b-a3b` (Fallback: `meta/llama-3.2-11b-vision-instruct`, `nemotron-3-super-120b-a12b`)
+  - Diagnostics, Validation & Reliability → `nvidia/nemotron-3-nano-30b-a3b` (Fallback: `deepseek-ai/deepseek-v4-pro-0813`, `meta/llama-3.2-11b-vision-instruct`)
 
 ---
 

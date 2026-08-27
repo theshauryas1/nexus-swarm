@@ -9,7 +9,7 @@ This document details the database storage engine, Entity-Relationship mappings,
 NexusSwarm implements database-engine parity for seamless developer experience:
 - **Local Development**: Configured to run against a self-contained SQLite database file at `backend/db/reports.sqlite3`. Columns representing complex structures store plain JSON text.
 - **Production Layer**: Configured to run against a PostgreSQL 15 relational store on Google Cloud SQL. Utilizes native `JSONB` columns for fast parsing, indexing, and JSON-path queries.
-- **Memory Engine Vectors**: Integrates with PostgreSQL `pgvector` extension for storing and querying 1024-dimensional semantic embeddings (using `nvidia/embed-qa-4` model) for long-term agent memory.
+- **Memory Engine Vectors**: Integrates with PostgreSQL `pgvector` extension for storing and querying 1024-dimensional semantic embeddings (using `nvidia/llama-nemotron-embed-vl-1b-v2` model) for long-term agent memory.
 
 ---
 

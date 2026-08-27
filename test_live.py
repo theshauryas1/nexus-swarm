@@ -1,6 +1,6 @@
 import urllib.request, json, sys, time
 
-BASE = "https://nexusswarm-backend-537381825142.us-central1.run.app"
+BASE = "https://nexusswarm-backend-669943047856.us-central1.run.app"
 
 sys.stdout.reconfigure(encoding="utf-8")
 

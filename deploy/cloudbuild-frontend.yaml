@@ -4,9 +4,9 @@ steps:
     args:
       - 'build'
       - '--build-arg'
-      - 'VITE_API_URL=https://nexusswarm-backend-titbewudzq-uc.a.run.app'
+      - 'VITE_API_URL=https://nexusswarm-backend-669943047856.us-central1.run.app'
       - '--build-arg'
-      - 'VITE_WS_URL=wss://nexusswarm-backend-titbewudzq-uc.a.run.app'
+      - 'VITE_WS_URL=wss://nexusswarm-backend-669943047856.us-central1.run.app'
       - '-t'
       - 'us-central1-docker.pkg.dev/${PROJECT_ID}/nexusswarm/nexusswarm-frontend:latest'
       - './frontend'

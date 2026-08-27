@@ -19,13 +19,14 @@ const STATUS_DOT: Record<string, { color: string; pulse: boolean }> = {
 }
 
 const MODEL_SHORT: Record<string, string> = {
-  "mistralai/mistral-large-2-instruct":      "Mistral L",
-  "mistralai/mistral-nemo-12b-instruct":     "Nemo",
-  "qwen/qwen3-coder-480b-a35b-instruct":     "Qwen3",
-  "meta/llama-4-maverick-17b-128e-instruct": "Llama 4",
-  "deepseek-ai/deepseek-v4-flash":           "DeepSeek",
-  "meta/llama-3.3-70b-instruct":             "Llama 3.3",
-  "meta/llama-3.1-8b-instruct":              "Llama 3.1",
+  "nvidia/nemotron-3-super-120b-a12b":      "Nemotron 120B",
+  "meta/llama-3.2-11b-vision-instruct":    "Llama 3.2",
+  "nvidia/nemotron-3-nano-30b-a3b":        "Nemotron 30B",
+  "nvidia/nemotron-3.5-lightning-30b-a3b": "Lightning 30B",
+  "deepseek-ai/deepseek-v4-pro-0813":       "DeepSeek Pro",
+  "mistralai/mistral-large-2-instruct":     "Mistral L",
+  "meta/llama-3.3-70b-instruct":            "Llama 3.3",
+  "meta/llama-3.1-8b-instruct":             "Llama 3.1",
 }
 
 const TREE = [

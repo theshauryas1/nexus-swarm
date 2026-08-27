@@ -33,7 +33,7 @@ steps:
           --platform=managed \
           --allow-unauthenticated \
           --add-cloudsql-instances=${_DB_CONNECTION} \
-          --set-env-vars="^;^APP_ENV=production;GCS_BUCKET=${_GCS_BUCKET};DATABASE_URL=postgresql+asyncpg://postgres:$$DB_PASSWORD@/nexusswarm?host=/cloudsql/${_DB_CONNECTION};CORS_ALLOWED_ORIGINS=$${CORS_ORIGINS};CORS_ALLOWED_METHODS=GET,POST,OPTIONS;CORS_ALLOWED_HEADERS=Content-Type,Authorization;TRUSTED_HOSTS=localhost,127.0.0.1,testserver,nexusswarm-backend-titbewudzq-uc.a.run.app,nexusswarm-backend-537381825142.us-central1.run.app,nexusswarm-backend-669943047856.us-central1.run.app" \
+          --set-env-vars="^;^APP_ENV=production;NIM_ORCHESTRATOR_MODEL=nvidia/nemotron-3-super-120b-a12b;NIM_MANAGER_MODEL=nvidia/nemotron-3-nano-30b-a3b;NIM_WORKER_MODEL=meta/llama-3.2-11b-vision-instruct;GCS_BUCKET=${_GCS_BUCKET};DATABASE_URL=postgresql+asyncpg://postgres:$$DB_PASSWORD@/nexusswarm?host=/cloudsql/${_DB_CONNECTION};CORS_ALLOWED_ORIGINS=$${CORS_ORIGINS};CORS_ALLOWED_METHODS=GET,POST,OPTIONS;CORS_ALLOWED_HEADERS=Content-Type,Authorization;TRUSTED_HOSTS=localhost,127.0.0.1,testserver,nexusswarm-backend-titbewudzq-uc.a.run.app,nexusswarm-backend-537381825142.us-central1.run.app,nexusswarm-backend-669943047856.us-central1.run.app" \
           --set-secrets="NVIDIA_API_KEY=nexusswarm-nvidia-key:latest,DB_PASSWORD=nexusswarm-db-pass:latest,GEMINI_API_KEY=nexusswarm-gemini-key:latest"
 
   # ─── 3b. Query Backend Cloud Run URL ──────────────────────────────────
@@ -89,5 +89,5 @@ steps:
 substitutions:
   _LOCATION: 'us-central1'
   _REPO: 'nexusswarm'
-  _DB_CONNECTION: 'planar-ember-501917-u6:us-central1:nexusswarm-db'
-  _GCS_BUCKET: 'nexusswarm-outputs-planar-ember-501917-u6'
+  _DB_CONNECTION: 'mystical-surfer-501613-p5:us-central1:nexusswarm-db'
+  _GCS_BUCKET: 'nexusswarm-outputs-mystical-surfer-501613-p5'

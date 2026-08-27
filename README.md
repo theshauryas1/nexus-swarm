@@ -19,23 +19,35 @@ The project contains complete documentation covering system design, API contract
 
 ---
 
+## 🌐 Live Google Cloud Deployment
+
+The application is deployed live on Google Cloud Platform (Cloud Run, Cloud SQL, Artifact Registry, Secret Manager, Cloud Build):
+
+- 🖥️ **Frontend IDE Dashboard**: [https://nexusswarm-frontend-669943047856.us-central1.run.app](https://nexusswarm-frontend-669943047856.us-central1.run.app)
+- ⚙️ **Backend REST & WebSocket API**: [https://nexusswarm-backend-669943047856.us-central1.run.app](https://nexusswarm-backend-669943047856.us-central1.run.app)
+- 📚 **Interactive Swagger API Docs**: [https://nexusswarm-backend-669943047856.us-central1.run.app/docs](https://nexusswarm-backend-669943047856.us-central1.run.app/docs)
+
+---
+
 ## 🛠️ Technology Stack
 
 | Layer | Technology |
 | :--- | :--- |
+| **Cloud Hosting** | Google Cloud Run (Fully Managed, Auto-scaling Serverless Containers) |
+| **Cloud Infrastructure** | Google Cloud SQL (PostgreSQL), Artifact Registry, Cloud Build, Secret Manager |
 | **Agent Framework** | Microsoft AutoGen v0.4 (`autogen-agentchat`, `autogen-ext`) |
-| **Primary LLM** | NVIDIA NIM API (`mistralai/mistral-large-3`, `qwen2.5-coder-32b`, `mistral-nemo-12b`) |
-| **Development LLM** | Ollama local API fallback (`gemma`, `qwen`) |
+| **Model Router** | Intelligent Model Router with Dynamic Fallback Chains per agent & task |
+| **Primary LLMs (NVIDIA NIM)** | • `nvidia/nemotron-3-super-120b-a12b` (Orchestration, Security & Architecture)<br>• `meta/llama-3.2-11b-vision-instruct` (Code Generation & Workers, ~0.5s)<br>• `nvidia/nemotron-3-nano-30b-a3b` (Pipeline Managers & Diagnostics, ~0.38s)<br>• `nvidia/nemotron-3.5-lightning-30b-a3b` (Deep Refactoring & Reasoning)<br>• `deepseek-ai/deepseek-v4-pro-0813` (Agentic Reliability & Diagnostics) |
+| **Embedding Engine** | `nvidia/llama-nemotron-embed-vl-1b-v2` & Deterministic Normalized Vectorizer |
 | **Tool Interface** | Model Context Protocol (stdio servers: `logger_mcp`, `security_mcp`, `quality_mcp`, `pipeline_status_mcp`) |
 | **Backend** | FastAPI, SQLAlchemy 2.0 (Async), Pydantic v2 |
-| **State & Cache** | Redis (pub/sub logs and AutoGen state cache) |
-| **Relational Storage** | PostgreSQL 15 / Local SQLite fallback |
-| **Semantic Memory** | PostgreSQL `pgvector` with 1024-dimension embeddings |
-| **Frontend UI** | React 18, Vite, Tailwind CSS v4, Zustand v4, React Flow, Monaco Editor |
+| **Relational Storage** | PostgreSQL 15 (Cloud SQL) / Local SQLite fallback |
+| **Semantic Memory** | PostgreSQL `pgvector` with 1024-dimension vector embeddings |
+| **Frontend UI** | React 18, Vite, Tailwind CSS, Zustand v4, React Flow, Monaco Editor |
 
 ---
 
-## 🚀 Quick Start (Docker Compose)
+## 🚀 Quick Start (Local & Cloud)
 
 ### 1. Clone & Configure
 ```bash
@@ -44,9 +56,9 @@ cd nexus-swarm
 cp .env.example .env
 ```
 
-Edit your `.env` to supply either your `NVIDIA_API_KEY` or `AZURE_OPENAI_API_KEY`.
+Edit your `.env` to supply your `NVIDIA_API_KEY` (free key from [build.nvidia.com](https://build.nvidia.com)).
 
-### 2. Launch Services
+### 2. Launch Services Locally
 ```bash
 docker compose up --build
 ```

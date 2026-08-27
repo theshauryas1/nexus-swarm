@@ -208,46 +208,39 @@ Unchanged from v1 but now integrated through the **File System MCP Server**:
 
 ---
 
-## 🧬 Intelligent Model Router (`backend/engines/model_router.py`)
+## 🧬 Intelligent Dynamic Fallback Model Router (`backend/engines/model_router.py`)
 
-Replaces static agent-model mapping with dynamic selection based on task analysis and model metadata:
+Replaces static agent-model mapping with dynamic selection and automatic multi-model fallback chains based on task analysis, active benchmark health, and model metadata:
 
 ```python
-# Model Metadata Example
+# Live Verified Model Registry (NVIDIA NIM 2026)
 MODEL_REGISTRY = {
-    "qwen/qwen3-coder-480b-a35b-instruct": {
-        "strengths": ["coding", "debugging", "refactoring"],
-        "task_types": ["code_generation", "bug_fix", "refactoring"],
-        "latency_ms": 1200,
-        "cost_per_1k_tokens": 0.0,  # NVIDIA NIM free tier
+    "meta/llama-3.2-11b-vision-instruct": {
+        "strengths": ["coding", "debugging", "refactoring", "fast_inference"],
+        "task_types": ["code_generation", "bug_fix", "refactoring", "testing"],
+        "latency_ms": 600,
+        "cost_per_1k_tokens": 0.0001,
         "context_window": 128000,
         "provider": "nvidia_nim"
     },
-    "meta/llama-3.3-70b-instruct": {
-        "strengths": ["reasoning", "planning", "analysis"],
-        "task_types": ["architecture", "task_decomposition", "planning"],
-        "latency_ms": 1800,
-        "cost_per_1k_tokens": 0.0,
+    "nvidia/nemotron-3-super-120b-a12b": {
+        "strengths": ["reasoning", "planning", "security", "architecture"],
+        "task_types": ["architecture", "task_decomposition", "planning", "security_scan"],
+        "latency_ms": 1500,
+        "cost_per_1k_tokens": 0.0008,
         "context_window": 128000,
         "provider": "nvidia_nim"
     },
-    # ... other models
+    "nvidia/nemotron-3-nano-30b-a3b": {
+        "strengths": ["coordination", "diagnostics", "summarization", "fast"],
+        "task_types": ["coordination", "summarization", "validation", "diagnostics"],
+        "latency_ms": 380,
+        "cost_per_1k_tokens": 0.00008,
+        "context_window": 64000,
+        "provider": "nvidia_nim"
+    },
+    # ... fallback chains automatically recover from model deprecation / timeouts
 }
-
-async def select_optimal_model(task_type: str, requirements: Dict) -> str:
-    """
-    Intelligently select the best model for a given task type and requirements.
-    """
-    compatible_models = [
-        (model_id, metadata) for model_id, metadata in MODEL_REGISTRY.items()
-        if task_type in metadata["task_types"]
-    ]
-    filtered_models = apply_requirements(compatible_models, requirements)
-    scored_models = [
-        (model_id, calculate_model_score(model_id, task_type))
-        for model_id, _ in filtered_models
-    ]
-    return max(scored_models, key=lambda x: x[1])[0] if scored_models else DEFAULT_MODEL
 ```
 
 ---

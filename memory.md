@@ -52,9 +52,9 @@ ORDER BY embedding <=> :query_embedding::vector
 LIMIT 5;
 ```
 
-### 3.2. Embedding Model: NVIDIA NIM `nvidia/embed-qa-4`
+### 3.2. Embedding Model: NVIDIA NIM `nvidia/llama-nemotron-embed-vl-1b-v2`
 * **Provider**: NVIDIA NIM API (`integrate.api.nvidia.com/v1/embeddings`).
-* **Vector Dimensions**: `1024` dimensions.
+* **Vector Dimensions**: `1024` dimensions (with automatic dimension normalization and pgvector compatibility).
 * **Specialization**: Optimized for technical documentation, code QA, and dense passage retrieval.
 
 ### 3.3. Offline / Resilient Fallback: Deterministic Pseudo-Embedding

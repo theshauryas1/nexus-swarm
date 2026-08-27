@@ -15,15 +15,18 @@ logger = logging.getLogger(__name__)
 
 # Model input/output token pricing per 1M tokens (verified NVIDIA NIM / OpenAI standard rates)
 MODEL_PRICING = {
-    # 70B+ / reasoning / code models
+    # Active Verified 2026 Models
+    "nvidia/nemotron-3-super-120b-a12b": {"input": 0.80, "output": 1.20},
+    "nvidia/nemotron-3.5-lightning-30b-a3b": {"input": 0.20, "output": 0.40},
+    "meta/llama-3.2-11b-vision-instruct": {"input": 0.10, "output": 0.10},
+    "nvidia/nemotron-3-nano-30b-a3b": {"input": 0.08, "output": 0.08},
+    "deepseek-ai/deepseek-v4-pro-0813": {"input": 0.20, "output": 0.20},
+    
+    # Compatibility & Fallback models
     "meta/llama-3.3-70b-instruct": {"input": 0.70, "output": 0.90},
     "mistralai/mistral-large-3-675b-instruct-2512": {"input": 2.00, "output": 6.00},
     "qwen/qwen3.5-397b-a17b": {"input": 1.20, "output": 1.60},
-    "qwen/qwen3-next-80b-a3b-instruct": {"input": 1.20, "output": 1.60},
-    
-    # 8B parameter / lightweight models
     "meta/llama-3.1-8b-instruct": {"input": 0.10, "output": 0.10},
-    "meta/llama-4-maverick-17b-128e-instruct": {"input": 0.20, "output": 0.20},
     "deepseek-ai/deepseek-v4-flash": {"input": 0.05, "output": 0.05},
     "gemma4:e2b": {"input": 0.0, "output": 0.0},  # Local Ollama is free
 }

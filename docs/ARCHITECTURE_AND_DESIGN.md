@@ -107,13 +107,14 @@ NexusSwarm is segmented into two sub-projects: `frontend/` (React SPA) and `back
 
 ### 2.3. Model Tier
 
-* **Primary Provider**: **NVIDIA NIM** (hosted API at `integrate.api.nvidia.com`), chosen for high-performance enterprise models:
-  * `mistralai/mistral-large-3-675b-instruct-2512` (Reasoning, Orchestration)
-  * `qwen/qwen3.5-397b-a17b` (Code Generation)
-  * `meta/llama-4-maverick-17b-128e-instruct` (Validation, Planning)
-  * `meta/llama-3.1-8b-instruct` (Fast coordination & retries)
-  * `nvidia/embed-qa-4` (1024-dimensional semantic text embeddings)
-* **Fallback / Development Provider**: **Ollama** (Local API at `localhost:11434`), enabling zero-cost local code engineering tasks when offline.
+* **Primary Provider**: **NVIDIA NIM** (hosted API at `integrate.api.nvidia.com`), equipped with an intelligent Dynamic Fallback Model Router:
+  * `nvidia/nemotron-3-super-120b-a12b` (120B MoE — Head Orchestration, Security Audit, Architecture)
+  * `meta/llama-3.2-11b-vision-instruct` (11B Vision/Instruct — Ultra-fast Sub-second Code Generation & Workers)
+  * `nvidia/nemotron-3-nano-30b-a3b` (30B MoE — Fast Management Coordination, Diagnostics & Validation)
+  * `nvidia/nemotron-3.5-lightning-30b-a3b` (30B MoE — Deep Reasoning & Refactoring)
+  * `deepseek-ai/deepseek-v4-pro-0813` (Agentic Reliability & Diagnostics)
+  * `nvidia/llama-nemotron-embed-vl-1b-v2` (1024-dimensional semantic text embeddings with pgvector)
+* **Fallback / Development Provider**: **Ollama** (Local API at `localhost:11434`), enabling zero-cost local engineering when offline.
 
 ---
 

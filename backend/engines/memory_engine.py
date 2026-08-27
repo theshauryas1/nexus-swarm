@@ -15,7 +15,7 @@ from config import get_settings
 
 logger = logging.getLogger(__name__)
 
-EMBEDDING_MODEL = "nvidia/embed-qa-4"
+EMBEDDING_MODEL = "nvidia/llama-nemotron-embed-vl-1b-v2"
 EMBEDDING_DIM = 1024
 
 
@@ -26,22 +26,18 @@ def get_pseudo_embedding(text: str, dimensions: int = EMBEDDING_DIM) -> List[flo
     Provides basic similarity ranking based on keyword overlap.
     """
     vec = [0.0] * dimensions
-    # Simple tokenization
     import re
     words = re.findall(r'[a-zA-Z0-9_]+', text.lower())
     if not words:
         return vec
         
     for word in words:
-        # Generate multiple indices per word to distribute weight (min-hash inspired)
         h = int(hashlib.md5(word.encode('utf-8')).hexdigest(), 16)
         for i in range(5):
             idx = (h + i * 101) % dimensions
-            # Weight based on hash bits
             val = ((h >> (i * 8)) & 0xFF) / 255.0
             vec[idx] += val
             
-    # L2 Normalization
     norm = math.sqrt(sum(x * x for x in vec))
     if norm > 0:
         vec = [x / norm for x in vec]
@@ -61,7 +57,6 @@ async def generate_embedding(text: str) -> List[float]:
         return get_pseudo_embedding(text)
 
     try:
-        # Use AsyncOpenAI client configured for NVIDIA NIM
         client = AsyncOpenAI(
             base_url=settings.nvidia_base_url,
             api_key=api_key,
@@ -76,8 +71,12 @@ async def generate_embedding(text: str) -> List[float]:
         embedding = response.data[0].embedding
         if len(embedding) == EMBEDDING_DIM:
             return embedding
+        elif len(embedding) > EMBEDDING_DIM:
+            # Downsample / slice with L2 normalization to match pgvector column
+            sliced = embedding[:EMBEDDING_DIM]
+            norm = math.sqrt(sum(x * x for x in sliced))
+            return [x / norm for x in sliced] if norm > 0 else sliced
         else:
-            logger.warning(f"Unexpected embedding dimension: {len(embedding)} (expected {EMBEDDING_DIM}). Generating pseudo-embedding.")
             return get_pseudo_embedding(text)
             
     except Exception as e:
