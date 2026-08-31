@@ -57,6 +57,24 @@ MODEL_REGISTRY = {
         "cost_per_1k_tokens": 0.0002,
         "context_window": 128000,
         "provider": "nvidia_nim"
+    },
+    "gemini-2.0-flash": {
+        "model_id": "gemini-2.0-flash",
+        "strengths": ["speed", "multimodal", "reasoning", "coding", "low_latency"],
+        "task_types": ["task_decomposition", "planning", "code_generation", "bug_fix", "refactoring", "testing", "coordination", "security_scan"],
+        "latency_ms": 450,
+        "cost_per_1k_tokens": 0.0001,
+        "context_window": 1000000,
+        "provider": "google_gemini"
+    },
+    "gemini-1.5-pro": {
+        "model_id": "gemini-1.5-pro",
+        "strengths": ["deep_reasoning", "architecture", "security", "long_context"],
+        "task_types": ["architecture", "task_decomposition", "planning", "security_scan", "refactoring"],
+        "latency_ms": 1200,
+        "cost_per_1k_tokens": 0.00125,
+        "context_window": 2000000,
+        "provider": "google_gemini"
     }
 }
 

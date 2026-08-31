@@ -42,3 +42,18 @@ async def test_log_model_outcome():
     # Log performance results and verify no exceptions are thrown
     await log_model_outcome("meta/llama-3.2-11b-vision-instruct", "code_generation", 550.0, True)
     await log_model_outcome("nvidia/nemotron-3-super-120b-a12b", "task_decomposition", 1200.0, True)
+
+def test_gemini_models_in_registry():
+    assert "gemini-2.0-flash" in MODEL_REGISTRY
+    assert "gemini-1.5-pro" in MODEL_REGISTRY
+    assert MODEL_REGISTRY["gemini-2.0-flash"]["provider"] == "google_gemini"
+
+def test_model_timeout_computation():
+    from agents.llm_factory import _get_model_timeout
+    # 120B model should get at least 60s
+    t_large = _get_model_timeout("nvidia/nemotron-3-super-120b-a12b")
+    assert t_large >= 60.0
+    # Fast 11B model should get at least 30s
+    t_fast = _get_model_timeout("meta/llama-3.2-11b-vision-instruct")
+    assert t_fast >= 30.0
+

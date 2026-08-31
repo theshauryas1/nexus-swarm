@@ -40,6 +40,10 @@ class Settings(BaseSettings):
 
     # ── GEMINI ─────────────────────────────────────────────────────
     gemini_api_key: str = ""
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    gemini_orchestrator_model: str = "gemini-2.0-flash"
+    gemini_manager_model: str = "gemini-2.0-flash"
+    gemini_worker_model: str = "gemini-2.0-flash"
 
     # ── Azure OpenAI ───────────────────────────────────────────────
     azure_openai_api_key: str = ""
@@ -49,7 +53,7 @@ class Settings(BaseSettings):
     azure_openai_api_version: str = "2024-08-01-preview"
 
     # ── LLM Routing ────────────────────────────────────────────────
-    llm_provider: Literal["azure", "nvidia", "auto", "ollama"] = "auto"
+    llm_provider: Literal["azure", "nvidia", "gemini", "auto", "ollama"] = "auto"
 
     # ── Infrastructure ─────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379"
@@ -73,6 +77,10 @@ class Settings(BaseSettings):
         return bool(self.nvidia_api_key)
 
     @property
+    def gemini_available(self) -> bool:
+        return bool(self.gemini_api_key)
+
+    @property
     def resolved_provider(self) -> str:
         """Resolve the actual provider based on availability."""
         if self.llm_provider == "ollama":
@@ -83,13 +91,21 @@ class Settings(BaseSettings):
             return "azure"
         if self.llm_provider == "nvidia":
             if not self.nvidia_available:
+                if self.gemini_available:
+                    return "gemini"
                 raise ValueError("NVIDIA NIM configured but API key missing")
             return "nvidia"
-        # auto mode
-        if self.azure_available:
-            return "azure"
+        if self.llm_provider == "gemini":
+            if not self.gemini_available:
+                raise ValueError("Gemini configured but API key missing")
+            return "gemini"
+        # auto mode: prioritize available keys
         if self.nvidia_available:
             return "nvidia"
+        if self.gemini_available:
+            return "gemini"
+        if self.azure_available:
+            return "azure"
         # Graceful fallback instead of crashing
         return "mock"
 
@@ -125,6 +141,26 @@ class Settings(BaseSettings):
                 ],
                 "temperature": 0.0,
                 "timeout": 60,
+            }
+
+        if provider == "gemini":
+            model = (
+                self.gemini_orchestrator_model
+                if role == "orchestrator"
+                else self.gemini_manager_model
+                if role == "manager"
+                else self.gemini_worker_model
+            )
+            return {
+                "config_list": [
+                    {
+                        "model": model,
+                        "api_key": self.gemini_api_key,
+                        "base_url": self.gemini_base_url,
+                    }
+                ],
+                "temperature": 0.1 if role == "orchestrator" else 0.3,
+                "timeout": self.agent_timeout_seconds,
             }
 
         if provider == "azure":

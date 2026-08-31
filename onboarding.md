@@ -108,3 +108,32 @@ The project includes specialized development scripts located in [backend/scripts
   ```bash
   python backend/scripts/sanitize_workspace.py
   ```
+
+---
+
+## 4. Google Cloud Deployments (Cloud Run + Cloud Build)
+
+NexusSwarm provides full Cloud Build CI/CD automation to deploy directly to Google Cloud Platform:
+
+### 4.1. Automated Provisioning
+Provision Cloud SQL, Secret Manager, GCS bucket, and Artifact Registry:
+```bash
+./deploy/setup.sh
+```
+
+### 4.2. Cloud Build Deployment Commands
+- **Deploy Complete Application (Frontend + Backend)**:
+  ```bash
+  gcloud builds submit --config=deploy/cloudbuild.yaml
+  ```
+- **Deploy Backend Service only**:
+  ```bash
+  gcloud builds submit --config=deploy/cloudbuild-backend.yaml
+  ```
+- **Deploy Frontend Dashboard only**:
+  ```bash
+  gcloud builds submit --config=deploy/cloudbuild-frontend.yaml
+  ```
+
+For full architecture details, environment variables, and troubleshooting, see **[deploy/README.md](file:///c:/hack/deploy/README.md)** and **[docs/DEPLOYMENT_GUIDE.md](file:///c:/hack/docs/DEPLOYMENT_GUIDE.md)**.
+

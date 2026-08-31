@@ -151,24 +151,48 @@ AGENT_TO_TASK_TYPE: dict[str, str] = {
 #  CLIENT FACTORY
 # ─────────────────────────────────────────────────────────────
 
-def _get_client() -> AsyncOpenAI:
-    """Returns AsyncOpenAI client pointed at LLM provider."""
-    provider = os.environ.get("LLM_PROVIDER", "nvidia")
-    if provider == "ollama":
-        return AsyncOpenAI(
-            base_url="http://localhost:11434/v1",
-            api_key="ollama",
-        )
+def _get_client(provider: Optional[str] = None) -> tuple[AsyncOpenAI, str]:
+    """
+    Returns (AsyncOpenAI client, effective_provider_name).
+    Supports NVIDIA NIM, Google Gemini (OpenAI-compatible endpoint), and Ollama.
+    """
+    env_provider = provider or os.environ.get("LLM_PROVIDER", "").lower()
     
-    api_key = os.environ.get("NVIDIA_API_KEY")
-    if not api_key:
-        raise EnvironmentError(
-            "NVIDIA_API_KEY not set. "
-            "Get a free key at build.nvidia.com"
-        )
-    return AsyncOpenAI(
-        base_url="https://integrate.api.nvidia.com/v1",
-        api_key=api_key,
+    if env_provider == "ollama":
+        return AsyncOpenAI(
+            base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
+            api_key="ollama",
+        ), "ollama"
+
+    nvidia_key = os.environ.get("NVIDIA_API_KEY", "").strip()
+    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+
+    if env_provider == "gemini":
+        if not gemini_key:
+            raise EnvironmentError("GEMINI_API_KEY not set for Gemini provider.")
+        return AsyncOpenAI(
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+            api_key=gemini_key,
+        ), "gemini"
+
+    # Default / NVIDIA provider preference
+    if nvidia_key:
+        return AsyncOpenAI(
+            base_url=os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
+            api_key=nvidia_key,
+        ), "nvidia"
+
+    # Fallback to Gemini if NVIDIA key is absent but Gemini key is available
+    if gemini_key:
+        logger.info("NVIDIA_API_KEY not found; falling back to GEMINI_API_KEY.")
+        return AsyncOpenAI(
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+            api_key=gemini_key,
+        ), "gemini"
+
+    # Neither key found
+    raise EnvironmentError(
+        "No LLM API keys detected. Please set NVIDIA_API_KEY or GEMINI_API_KEY in environment or Secret Manager."
     )
 
 
@@ -177,9 +201,11 @@ def get_model_for_agent(agent_name: str) -> str:
     Returns the allotted primary NIM model ID for a given agent.
     Falls back to LLAMA_VISION if agent name is not found.
     """
-    provider = os.environ.get("LLM_PROVIDER", "nvidia")
+    provider = os.environ.get("LLM_PROVIDER", "").lower()
     if provider == "ollama":
         return "gemma4:e2b"
+    if provider == "gemini":
+        return "gemini-2.0-flash"
     model = AGENT_MODEL_MAP.get(agent_name)
     if not model:
         logger.warning(f"No model mapping for '{agent_name}' — defaulting to {LLAMA_VISION}")
@@ -190,6 +216,29 @@ def get_model_for_agent(agent_name: str) -> str:
 # ─────────────────────────────────────────────────────────────
 #  CORE INFERENCE CALL WITH AUTOMATIC MODEL FAILOVER
 # ─────────────────────────────────────────────────────────────
+
+def _get_model_timeout(model: str) -> float:
+    """Computes a realistic timeout (in seconds) per model to prevent premature aborts."""
+    try:
+        from config import get_settings
+        configured_timeout = float(get_settings().agent_timeout_seconds)
+    except Exception:
+        configured_timeout = 90.0
+
+    env_timeout = os.environ.get("LLM_TIMEOUT_SECONDS")
+    if env_timeout:
+        try:
+            return float(env_timeout)
+        except ValueError:
+            pass
+
+    # Large 120B / deep reasoning models get full configured budget (min 60s)
+    if "120b" in model.lower() or "pro" in model.lower():
+        return max(configured_timeout, 60.0)
+    
+    # Fast models (11B / flash / nano) get 45s
+    return max(min(configured_timeout, 45.0), 30.0)
+
 
 async def call_agent_llm(
     agent_name: str,
@@ -203,8 +252,8 @@ async def call_agent_llm(
     Main inference function. Queries the Model Router for candidate fallback
     models and automatically switches to alternative models if the primary
     model times out, returns HTTP 404/429/500/503, or is deprecated.
+    Also seamlessly fails over to Gemini if NVIDIA NIM times out or is unavailable.
     """
-    provider = os.environ.get("LLM_PROVIDER", "nvidia")
     task_type = AGENT_TO_TASK_TYPE.get(agent_name, "default")
     
     # ── LLM Guardrail Check: Input
@@ -219,38 +268,59 @@ async def call_agent_llm(
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": safe_prompt})
 
-    client = _get_client()
+    # Obtain primary client & provider
+    client, provider = _get_client()
 
     if provider == "ollama":
-        candidates = ["gemma4:e2b"]
+        candidates = [("gemma4:e2b", "ollama")]
+    elif provider == "gemini":
+        candidates = [("gemini-2.0-flash", "gemini"), ("gemini-1.5-pro", "gemini")]
     else:
         from engines.model_router import get_candidate_models_for_task, select_optimal_model
         primary_optimal = await select_optimal_model(task_type)
         task_candidates = get_candidate_models_for_task(task_type)
         
         # Build candidate chain: primary first, followed by others without duplicates
-        candidates = [primary_optimal]
+        raw_candidates = [primary_optimal]
         agent_allotted = AGENT_MODEL_MAP.get(agent_name)
-        if agent_allotted and agent_allotted not in candidates:
-            candidates.append(agent_allotted)
+        if agent_allotted and agent_allotted not in raw_candidates:
+            raw_candidates.append(agent_allotted)
         for m in task_candidates:
-            if m not in candidates:
-                candidates.append(m)
+            if m not in raw_candidates:
+                raw_candidates.append(m)
+
+        candidates = [(m, "nvidia") for m in raw_candidates]
+
+        # Add Google Gemini as emergency cloud failover if GEMINI_API_KEY exists
+        if os.environ.get("GEMINI_API_KEY"):
+            candidates.append(("gemini-2.0-flash", "gemini"))
 
     last_error: Optional[Exception] = None
 
     # ── Attempt models in candidate fallback chain
-    for attempt_idx, model in enumerate(candidates):
-        logger.info(f"[{agent_name}] Attempt {attempt_idx + 1}/{len(candidates)} using model: {model}")
+    for attempt_idx, (model, model_provider) in enumerate(candidates):
+        logger.info(f"[{agent_name}] Attempt {attempt_idx + 1}/{len(candidates)} using {model_provider} model: {model}")
         start_time = time.time()
         success = False
+
+        # Switch client if this candidate uses a different provider (e.g. Gemini failover)
+        active_client = client
+        if model_provider != provider:
+            try:
+                active_client, _ = _get_client(provider=model_provider)
+            except Exception as ce:
+                logger.warning(f"Could not initialize provider client for {model_provider}: {ce}")
+                continue
+
+        timeout_sec = _get_model_timeout(model)
+
         try:
-            response = await client.chat.completions.create(
+            response = await active_client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
                 temperature=temperature,
-                timeout=25.0,  # Prevent hanging requests
+                timeout=timeout_sec,
             )
             content = response.choices[0].message.content
             if not content:
@@ -290,8 +360,8 @@ async def call_agent_llm(
         except Exception as e:
             latency_ms = (time.time() - start_time) * 1000.0
             last_error = e
-            logger.warning(f"[{agent_name}] Model {model} failed after {latency_ms:.0f}ms: {e}. Switching to fallback model...")
-            if provider != "ollama":
+            logger.warning(f"[{agent_name}] Model {model} ({model_provider}) failed after {latency_ms:.0f}ms: {e}. Switching to fallback model...")
+            if model_provider != "ollama":
                 try:
                     from engines.model_router import log_model_outcome
                     await log_model_outcome(model, task_type, latency_ms, False)
@@ -299,7 +369,7 @@ async def call_agent_llm(
                     pass
             continue
         finally:
-            if success and provider != "ollama":
+            if success and model_provider != "ollama":
                 latency_ms = (time.time() - start_time) * 1000.0
                 try:
                     from engines.model_router import log_model_outcome

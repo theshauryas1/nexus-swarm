@@ -67,12 +67,13 @@ gcloud sql databases create "$DB_NAME" \
     --instance="$INSTANCE_NAME" || echo "⚠️ Database already exists..."
 
 # 6. Configure Secrets in Secret Manager
+# 6. Configure Secrets in Secret Manager
 if [ -z "$NVIDIA_KEY" ]; then
     if [ -n "$NVIDIA_API_KEY" ]; then
         NVIDIA_KEY="$NVIDIA_API_KEY"
         echo "✅ Using NVIDIA API Key from environment (NVIDIA_API_KEY)"
     else
-        echo "🔑 Enter your NVIDIA API Key:"
+        echo "🔑 Enter your NVIDIA API Key (or press Enter to skip if using Gemini):"
         read -sp "API Key: " NVIDIA_KEY
         echo ""
     fi
@@ -82,7 +83,24 @@ fi
 
 echo "🔒 Creating secret in Secret Manager for NVIDIA API Key..."
 gcloud secrets create nexusswarm-nvidia-key --replication-policy="automatic" || echo "⚠️ Secret already exists..."
-echo -n "$NVIDIA_KEY" | gcloud secrets versions add nexusswarm-nvidia-key --data-file=-
+echo -n "${NVIDIA_KEY:-placeholder}" | gcloud secrets versions add nexusswarm-nvidia-key --data-file=-
+
+if [ -z "$GEMINI_KEY" ]; then
+    if [ -n "$GEMINI_API_KEY" ]; then
+        GEMINI_KEY="$GEMINI_API_KEY"
+        echo "✅ Using Gemini API Key from environment (GEMINI_API_KEY)"
+    else
+        echo "🔑 Enter your Gemini API Key (or press Enter to skip if using NVIDIA):"
+        read -sp "Gemini Key: " GEMINI_KEY
+        echo ""
+    fi
+else
+    echo "✅ Using Gemini API Key from environment (GEMINI_KEY)"
+fi
+
+echo "🔒 Creating secret in Secret Manager for Gemini API Key..."
+gcloud secrets create nexusswarm-gemini-key --replication-policy="automatic" || echo "⚠️ Secret already exists..."
+echo -n "${GEMINI_KEY:-placeholder}" | gcloud secrets versions add nexusswarm-gemini-key --data-file=-
 
 echo "🔒 Creating database password secret..."
 gcloud secrets create nexusswarm-db-pass --replication-policy="automatic" || echo "⚠️ Secret already exists..."

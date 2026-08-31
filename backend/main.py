@@ -36,12 +36,12 @@ logger = structlog.get_logger(__name__)
 
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
-        "default-src 'self'; "
-        "script-src 'self' https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-        "img-src 'self' data:; "
-        "font-src 'self' data:; "
-        "connect-src 'self'; "
+        "default-src 'self' https://*.run.app; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data: https://fonts.gstatic.com; "
+        "connect-src 'self' https://*.run.app wss://*.run.app https://integrate.api.nvidia.com https://accounts.google.com; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
         "form-action 'self'"
@@ -156,18 +156,21 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 # ─── CORS ─────────────────────────────────────────────────────────
 allowed_origins = parse_csv_setting(settings.cors_allowed_origins)
-allowed_methods = parse_csv_setting(settings.cors_allowed_methods) or ["GET", "POST"]
-allowed_headers = parse_csv_setting(settings.cors_allowed_headers) or ["Content-Type", "Authorization"]
+allowed_methods = parse_csv_setting(settings.cors_allowed_methods) or ["GET", "POST", "OPTIONS"]
+allowed_headers = parse_csv_setting(settings.cors_allowed_headers) or ["Content-Type", "Authorization", "Accept", "Origin"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"^https:\/\/([a-zA-Z0-9\-\.]+\.)?(run\.app|localhost)(:\d+)?$",
     allow_credentials=settings.cors_allow_credentials,
     allow_methods=allowed_methods,
     allow_headers=allowed_headers,
 )
 
 trusted_hosts = parse_csv_setting(settings.trusted_hosts) or ["localhost", "127.0.0.1", "testserver"]
+if "*.run.app" not in trusted_hosts:
+    trusted_hosts.extend(["*.run.app", "*.a.run.app"])
 
 app.add_middleware(
     TrustedHostMiddleware,
