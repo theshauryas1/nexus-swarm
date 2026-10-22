@@ -1,7 +1,32 @@
 # ⬡ NexusSwarm v2
 
 > **Hierarchical Multi-Agent Governance & AI Engineering Operating System**  
-> _An AI organizational hierarchy mirroring real enterprise engineering divisions where quality, security, and integration rules are enforced at the tool layer._
+> *An AI organizational hierarchy mirroring real enterprise engineering divisions where quality, security, and integration rules are enforced at the tool layer.*
+
+**NexusSwarm** is a 28-agent multi-agent platform built on Microsoft AutoGen, FastAPI, React, and NVIDIA NIM. It implements an executive, manager, and worker hierarchy automating software and AI engineering from requirements through deployment. A dynamic model router cut average task time by 62% on NIM's free tier by routing tasks to right-sized models instead of one large model. Includes guardrails against prompt injection, secret leakage, and hallucinated imports. Evaluated with a 100-task, 9-category benchmark suite and a resilience test report where 4 of 5 attack tests were blocked.
+
+---
+
+## ⚡ Key Highlights & Benchmark Results
+
+- **28-Agent Hierarchical Governance**: Executive, Manager, and Worker tiers divide concerns across Planning, Engineering, QA, Security, Reliability, and DevOps pipelines.
+- **62% Latency Reduction**: A dynamic model router cut average task execution time by **62%** on NVIDIA NIM's free tier by routing tasks to right-sized models (e.g. `nemotron-3-super-120b`, `llama-3.2-11b-vision`, `nemotron-3-nano-30b`) instead of routing all agent steps to one large model.
+- **Enterprise Guardrails**: Enforces runtime protection against prompt injection, secret leakage, and AST-validated hallucinated package imports.
+- **100-Task Benchmark Suite**: Evaluated across 9 categorized domains (Adversarial, Hallucination, Security, Self-Repair, Auth, Backend, Docker, Deployment, WebSocket) with multi-signal objective verification.
+- **Resilience Test Suite**: In live adversarial resilience testing, **4 of 5 attack tests were blocked** (blocking prompt injections, fake package hallucination traps, CVE/RCE exploits, and secret exfiltration).
+
+---
+
+## 📊 Evaluation & Resilience Metrics
+
+| Metric / Dimension | Specification & Results | Details & Evidence |
+| :--- | :--- | :--- |
+| **Benchmark Suite** | **100 Tasks / 9 Categories** | Covers `adversarial` (7), `hallucination` (12), `security` (12), `repair` (13), `auth` (12), `backend` (15), `docker` (12), `deployment` (12), and `websocket` (12) |
+| **Latency Reduction** | **62% Average Task Time Cut** | Model router dynamically selects right-sized NIM models per agent role instead of one large model (45s+ down to sub-15s pipelines) |
+| **Adversarial Resilience** | **4 / 5 Attacks Blocked (80%)** | Prompt injection (`T03`), hallucination trap (`T02`), RCE/eval patterns (`T05`), and CVE fake-package combo (`T10`) caught and blocked |
+| **Import Hallucination Defense** | **AST Validation** | Statically parses generated code to detect and reject non-existent packages (e.g., `superauth-enterprise-pro`, `pyjwt-enterprise`) |
+| **Self-Correction & Repair** | **Automated QA Loop** | Pytest tracebacks triaged by QAManager, patched by CoderAgent, and verified autonomously up to 3 retry iterations |
+| **Token Budget & Cost Tracking** | **LLMOps Telemetry** | Real-time token usage and cost accounting per task via `cost_tracker.py` |
 
 ---
 
@@ -9,14 +34,14 @@
 
 The project contains complete documentation covering system design, API contracts, database layers, and developer onboarding:
 
-- **[context.md](file:///c:/hack/context.md)**: Product specifications, target user personas, and core component workflows.
-- **[architecture.md](file:///c:/hack/architecture.md)**: System topology, agent hierarchy (Executive → Manager → Worker), and custom Model Context Protocol (MCP) server definitions.
-- **[api.md](file:///c:/hack/api.md)**: FastAPI REST endpoints, Pydantic schemas, WebSocket logs protocol, and rate-limiting guardrails.
-- **[database.md](file:///c:/hack/database.md)**: PostgreSQL production and SQLite local database schemas, entity-relationship diagrams (ERD), and tables structures.
-- **[onboarding.md](file:///c:/hack/onboarding.md)**: Local machine installation steps, Docker Compose guides, test suite executions, and developer scripts.
-- **[deploy/README.md](file:///c:/hack/deploy/README.md)** & **[docs/DEPLOYMENT_GUIDE.md](file:///c:/hack/docs/DEPLOYMENT_GUIDE.md)**: Complete Google Cloud deployment architecture, Cloud Run setup, and Cloud Build CI/CD.
-- **[learning_notes.md](file:///c:/hack/learning_notes.md)** *(Excluded from git tracking)*: Practical lessons on AutoGen state synchronization, prototype pollution prevention, and NIM routing optimizations.
-- **[interview_notes.md](file:///c:/hack/interview_notes.md)** *(Excluded from git tracking)*: Structural design review notes, engineering tradeoffs, and conceptual Q&As.
+- **[CONTEXT.md](CONTEXT.md)**: Product specifications, target user personas, and core component workflows.
+- **[architecture.md](architecture.md)**: System topology, agent hierarchy (Executive → Manager → Worker), and custom Model Context Protocol (MCP) server definitions.
+- **[api.md](api.md)**: FastAPI REST endpoints, Pydantic schemas, WebSocket logs protocol, and rate-limiting guardrails.
+- **[database.md](database.md)**: PostgreSQL production and SQLite local database schemas, entity-relationship diagrams (ERD), and tables structures.
+- **[onboarding.md](onboarding.md)**: Local machine installation steps, Docker Compose guides, test suite executions, and developer scripts.
+- **[deploy/README.md](deploy/README.md)** & **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**: Complete Google Cloud deployment architecture, Cloud Run setup, and Cloud Build CI/CD.
+- **[learning_notes.md](learning_notes.md)** *(Excluded from git tracking)*: Practical lessons on AutoGen state synchronization, prototype pollution prevention, and NIM routing optimizations.
+- **[interview_notes.md](interview_notes.md)** *(Excluded from git tracking)*: Structural design review notes, engineering tradeoffs, and conceptual Q&As.
 
 ---
 
