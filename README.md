@@ -41,8 +41,6 @@ The project contains complete documentation covering system design, API contract
 - **[onboarding.md](onboarding.md)**: Local machine installation steps, Docker Compose guides, test suite executions, and developer scripts.
 - **[deploy/README.md](deploy/README.md)** & **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**: Complete Google Cloud deployment architecture, Cloud Run setup, and Cloud Build CI/CD.
 - **[docs/ROUTER_BENCHMARK.md](docs/ROUTER_BENCHMARK.md)**: Router latency benchmarks, baseline measurements, and empirical run logs backing the 62% latency reduction.
-- **[learning_notes.md](learning_notes.md)**: Practical lessons on AutoGen state synchronization, prototype pollution prevention, and NIM routing optimizations.
-- **[interview_notes.md](interview_notes.md)**: Structural design review notes, engineering tradeoffs, and conceptual Q&As.
 
 ---
 
