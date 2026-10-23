@@ -1,6 +1,6 @@
 # ⬡ NexusSwarm v2
 
-https://github.com/user-attachments/assets/c64e6792-31ad-45a0-9367-e608dc014404
+https://github.com/user-attachments/assets/4df0bb3a-482a-464a-9666-4f944a572b79
 
 > **Hierarchical Multi-Agent Governance & AI Engineering Operating System**  
 > *An AI organizational hierarchy mirroring real enterprise engineering divisions where quality, security, and integration rules are enforced at the tool layer.*
