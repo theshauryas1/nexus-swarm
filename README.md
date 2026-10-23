@@ -3,16 +3,16 @@
 > **Hierarchical Multi-Agent Governance & AI Engineering Operating System**  
 > *An AI organizational hierarchy mirroring real enterprise engineering divisions where quality, security, and integration rules are enforced at the tool layer.*
 
-**NexusSwarm** is a 31-agent multi-agent platform (28 core pipeline roles + 3 validation & governance agents) built on Microsoft AutoGen, FastAPI, React, and NVIDIA NIM. It implements an executive, manager, and worker hierarchy automating software and AI engineering from requirements through deployment. A dynamic model router cut average task time by 62% on NIM's free tier by routing tasks to right-sized models instead of one large model. Includes guardrails against prompt injection, secret leakage, and hallucinated imports. Evaluated with a 107-task, 9-category benchmark suite and a resilience test report (4 attack tests blocked, plus a deployment-penalty scoring check).
+**NexusSwarm** is a 28-agent multi-agent platform (with 3 cross-cutting validation & governance agents) built on Microsoft AutoGen, FastAPI, React, and NVIDIA NIM. It implements an executive, manager, and worker hierarchy automating software and AI engineering from requirements through deployment. A dynamic model router cut average task time by 62% on NIM's free tier by routing tasks to right-sized models instead of one large model. Includes guardrails against prompt injection, secret leakage, and hallucinated imports. Evaluated with a 107-task, 9-category benchmark suite (107 tasks on disk, 100 evaluated per automated run) and a resilience test report (4 attack tests blocked, plus a deployment-penalty scoring check).
 
 ---
 
 ## ⚡ Key Highlights & Benchmark Results
 
-- **31-Agent Hierarchical Governance**: Executive, Manager, and Worker tiers divide concerns across Planning, Engineering, QA, Security, Reliability, and DevOps pipelines (28 core pipeline roles + 3 cross-cutting validation & safety agents).
+- **28-Agent Hierarchical Governance**: Executive, Manager, and Worker tiers divide concerns across Planning, Engineering, QA, Security, Reliability, and DevOps pipelines (supported by 3 cross-cutting validation and safety agents).
 - **62% Latency Reduction**: A dynamic model router cut average task execution time by **62%** on NVIDIA NIM's free tier by routing tasks to right-sized models (e.g. `nemotron-3-super-120b`, `llama-3.2-11b-vision`, `nemotron-3-nano-30b`) instead of routing all agent steps to one large model (roughly 45s baseline down to roughly 17s).
 - **Enterprise Guardrails**: Enforces runtime protection against prompt injection, secret leakage, and AST-validated hallucinated package imports.
-- **107-Task Benchmark Suite**: Evaluated across 9 categorized domains (Adversarial, Hallucination, Security, Self-Repair, Auth, Backend, Docker, Deployment, WebSocket) with multi-signal objective verification (automated test runner supports loading up to 100 tasks per execution cycle).
+- **107-Task Benchmark Suite (100 per Run)**: Evaluated across 9 categorized domains (Adversarial, Hallucination, Security, Self-Repair, Auth, Backend, Docker, Deployment, WebSocket) with multi-signal objective verification (107 tasks on disk; automated test runner evaluates 100 tasks per cycle via configurable loader limit).
 - **Resilience Test Suite**: In live resilience testing, **4 attack tests blocked, plus a deployment-penalty scoring check** (blocking prompt injections, fake package hallucination traps, CVE/RCE exploits, and secret exfiltration; test T06 verified Docker absence scoring penalty).
 
 ---
@@ -21,7 +21,7 @@
 
 | Metric / Dimension | Specification & Results | Details & Evidence |
 | :--- | :--- | :--- |
-| **Benchmark Suite** | **107 Tasks / 9 Categories** | Covers `adversarial` (7), `hallucination` (12), `security` (12), `repair` (13), `auth` (12), `backend` (15), `docker` (12), `deployment` (12), and `websocket` (12) |
+| **Benchmark Suite** | **107 Tasks / 9 Categories (100/run)** | Covers `adversarial` (7), `hallucination` (12), `security` (12), `repair` (13), `auth` (12), `backend` (15), `docker` (12), `deployment` (12), and `websocket` (12) (107 on disk, 100 per automated run) |
 | **Latency Reduction** | **62% Average Task Time Cut** | Model router dynamically selects right-sized NIM models per agent role instead of one large model (roughly 45s baseline down to roughly 17s; see [docs/ROUTER_BENCHMARK.md](docs/ROUTER_BENCHMARK.md)) |
 | **Adversarial Resilience** | **4 Attack Tests Blocked + 1 Scoring Check** | Prompt injection (`T03`), hallucination trap (`T02`), RCE/eval patterns (`T05`), and CVE fake-package combo (`T10`) caught and blocked; T06 verified Docker-penalty scoring |
 | **Import Hallucination Defense** | **AST Validation** | Statically parses generated code to detect and reject non-existent packages (e.g., `superauth-enterprise-pro`, `pyjwt-enterprise`) |
@@ -110,3 +110,9 @@ gcloud builds submit --config=deploy/cloudbuild-backend.yaml
 # Deploy Frontend only
 gcloud builds submit --config=deploy/cloudbuild-frontend.yaml
 ```
+
+---
+
+## 📄 License & Evaluation
+
+Source-available for review; contact me for reuse permission. See [LICENSE](LICENSE) for details.
