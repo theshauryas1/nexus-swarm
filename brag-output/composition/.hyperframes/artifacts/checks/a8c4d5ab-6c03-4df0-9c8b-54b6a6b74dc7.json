@@ -1,0 +1,915 @@
+{
+  "ok": false,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 7,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "gsap_infinite_repeat",
+        "severity": "warning",
+        "message": "GSAP tween uses `repeat: -1` (infinite), but the composition declares a finite 18s window. HyperFrames clips deterministic seeking and export to that explicit duration.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "D:\\hack\\brag-output\\composition\\index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Keep the explicit finite composition `data-duration`. Use a finite repeat count only when the loop itself must end before the composition does."
+      },
+      {
+        "code": "composition_file_too_large",
+        "severity": "warning",
+        "message": "This HTML composition file has 451 lines. Smaller sub-compositions are easier to read, iterate on, and diff.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "D:\\hack\\brag-output\\composition\\index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Split coherent scenes or layers into separate .html files under compositions/, then mount them from the parent with data-composition-src so each file stays small enough to inspect, revise, and validate independently."
+      },
+      {
+        "code": "timeline_track_too_dense",
+        "severity": "warning",
+        "message": "Track 0 has 4 timed elements in this HTML file. Smaller sub-compositions keep timelines easier to read, iterate on, and diff.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "D:\\hack\\brag-output\\composition\\index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Move coherent scene groups into separate .html files under compositions/ and mount them from the parent with data-composition-src so the timeline stays easier to inspect, revise, and validate."
+      },
+      {
+        "code": "nested_structure_needs_subcomposition",
+        "severity": "warning",
+        "message": "<section id=\"scene-1\"> is a timeline element that contains nested <div id=\"s1-pill\">. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "selector": "#scene-1",
+        "dataAttributes": {},
+        "sourceFile": "D:\\hack\\brag-output\\composition\\index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Move <section id=\"scene-1\"> and its contents into a sub-composition file and mount it with data-composition-src."
+      },
+      {
+        "code": "nested_structure_needs_subcomposition",
+        "severity": "warning",
+        "message": "<section id=\"scene-2\"> is a timeline element that contains nested <div id=\"s2-header\">. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "selector": "#scene-2",
+        "dataAttributes": {},
+        "sourceFile": "D:\\hack\\brag-output\\composition\\index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Move <section id=\"scene-2\"> and its contents into a sub-composition file and mount it with data-composition-src."
+      },
+      {
+        "code": "nested_structure_needs_subcomposition",
+        "severity": "warning",
+        "message": "<section id=\"scene-3\"> is a timeline element that contains nested <div id=\"s3-header\">. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "selector": "#scene-3",
+        "dataAttributes": {},
+        "sourceFile": "D:\\hack\\brag-output\\composition\\index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Move <section id=\"scene-3\"> and its contents into a sub-composition file and mount it with data-composition-src."
+      },
+      {
+        "code": "nested_structure_needs_subcomposition",
+        "severity": "warning",
+        "message": "<section id=\"scene-4\"> is a timeline element that contains nested <div id=\"s4-qa\">. The timeline shows one row per top-level element, and the root composition is built only from sub-compositions.",
+        "selector": "#scene-4",
+        "dataAttributes": {},
+        "sourceFile": "D:\\hack\\brag-output\\composition\\index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Move <section id=\"scene-4\"> and its contents into a sub-composition file and mount it with data-composition-src."
+      }
+    ],
+    "filesScanned": 1
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "duration": 18,
+    "samples": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 0,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": false,
+    "errorCount": 2,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "contrast_aa_failure",
+        "severity": "error",
+        "message": "Contrast is 4.18:1; WCAG AA requires 4.5:1.",
+        "text": "# Inspecting generated dependencies in AST...",
+        "fg": "rgb(100,116,139)",
+        "bg": "rgb(6,9,17)",
+        "ratio": 4.18,
+        "requiredRatio": 4.5,
+        "suggestedColor": "rgb(106,121,144)",
+        "large": false,
+        "selector": "div > section:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 1038,
+          "y": 576,
+          "width": 664,
+          "height": 24
+        },
+        "time": 9,
+        "times": [
+          9,
+          13
+        ]
+      },
+      {
+        "code": "contrast_aa_failure",
+        "severity": "error",
+        "message": "Contrast is 4.18:1; WCAG AA requires 4.5:1.",
+        "text": "# <-- fake pkg",
+        "fg": "rgb(100,116,139)",
+        "bg": "rgb(6,9,17)",
+        "ratio": 4.18,
+        "requiredRatio": 4.5,
+        "suggestedColor": "rgb(106,121,144)",
+        "large": false,
+        "selector": "div > section:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > span:nth-of-type(3)",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 1338,
+          "y": 626,
+          "width": 126,
+          "height": 20
+        },
+        "time": 9,
+        "times": [
+          9,
+          13
+        ]
+      },
+      {
+        "code": "contrast_aa_failure",
+        "severity": "warning",
+        "message": "Contrast is 3.76:1; WCAG AA requires 4.5:1.",
+        "text": "BLOCKED",
+        "fg": "rgb(255,255,255)",
+        "bg": "rgb(239,68,68)",
+        "ratio": 3.76,
+        "requiredRatio": 4.5,
+        "suggestedColor": "rgb(28,28,28)",
+        "large": false,
+        "selector": "div > section:nth-of-type(3) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > div:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 1038,
+          "y": 738.5,
+          "width": 79.15625,
+          "height": 25
+        },
+        "time": 13,
+        "times": [
+          13
+        ]
+      }
+    ],
+    "enabled": true,
+    "samples": [
+      1,
+      5,
+      9,
+      13,
+      17
+    ],
+    "checked": 99,
+    "passed": 94
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 3,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "first_frame_empty",
+        "severity": "warning",
+        "message": "Frame 0 shows only the background, and the first frame is the thumbnail on social players: have the title or key image already on screen at 0 s instead of entering from nothing; see references/review.md.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"What happens when you give real engineering tools? 28 aut...\" (12 words) is on screen 2.84 s (±0.01 s), under its 3.07 s floor: hold it about 0.5 s + 0.3 s a word (4.10 s here) before it leaves or changes; see references/motion.md.",
+        "text": "What happens when you give real engineering tools? 28 autonomous AI agents",
+        "selector": "#s1-title",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 491.56,
+          "y": 418.78,
+          "width": 936.8600000000001,
+          "height": 238.37
+        },
+        "time": 0.602,
+        "words": 12,
+        "seconds": 2.836,
+        "floorSeconds": 3.075
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 72 text elements stay under it for 0.5 s or more, the smallest \"05. RELIABILITY\" at 11 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "05. RELIABILITY",
+        "selector": "#s2-divisions > div:nth-of-type(5) > div:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 1270.04,
+          "y": 436.45,
+          "width": 96.97,
+          "height": 13.71
+        },
+        "time": 4.5,
+        "times": [
+          0.375,
+          1,
+          1,
+          1,
+          3.75,
+          3.75,
+          3.875,
+          3.875,
+          3.875,
+          4.25,
+          4.25,
+          4.25,
+          4.25,
+          4.25,
+          4.375,
+          4.375,
+          4.375,
+          4.375,
+          4.375,
+          4.375,
+          4.375,
+          4.375,
+          4.375,
+          4.375,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.5,
+          4.625,
+          4.625,
+          4.625,
+          4.625,
+          4.625,
+          5,
+          5,
+          8.125,
+          8.125,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          8.5,
+          9.875,
+          9.875,
+          9.875,
+          13.75,
+          13.75,
+          14.375,
+          14.875,
+          16,
+          16
+        ],
+        "fontPx": 10.77,
+        "floorPx": 28,
+        "seconds": 3.5,
+        "elements": [
+          {
+            "selector": "#s2-divisions > div:nth-of-type(5) > div:nth-of-type(1)",
+            "text": "05. RELIABILITY",
+            "fontPx": 10.77,
+            "time": 4.5,
+            "seconds": 3.5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(6) > div:nth-of-type(1)",
+            "text": "06. DEVOPS",
+            "fontPx": 10.83,
+            "time": 4.625,
+            "seconds": 3.375
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(3) > div:nth-of-type(1)",
+            "text": "03. QUALITY",
+            "fontPx": 10.84,
+            "time": 4.375,
+            "seconds": 3.625
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(1) > div:nth-of-type(1)",
+            "text": "01. PLANNING",
+            "fontPx": 10.89,
+            "time": 4.25,
+            "seconds": 3.75
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(4) > div:nth-of-type(1)",
+            "text": "04. SECURITY",
+            "fontPx": 10.93,
+            "time": 4.5,
+            "seconds": 3.5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(2) > div:nth-of-type(1)",
+            "text": "02. ENGINEERING",
+            "fontPx": 10.96,
+            "time": 4.375,
+            "seconds": 3.625
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(5) > ul:nth-of-type(1) > li:nth-of-type(1)",
+            "text": "Canary Verifier",
+            "fontPx": 11.75,
+            "time": 4.5,
+            "seconds": 3.5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(5) > ul:nth-of-type(1) > li:nth-of-type(2)",
+            "text": "Circuit Breaker",
+            "fontPx": 11.75,
+            "time": 4.5,
+            "seconds": 3.5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(5) > ul:nth-of-type(1) > li:nth-of-type(3)",
+            "text": "Memory Engine",
+            "fontPx": 11.75,
+            "time": 4.5,
+            "seconds": 3.5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(6) > ul:nth-of-type(1) > li:nth-of-type(1)",
+            "text": "Docker Builder",
+            "fontPx": 11.81,
+            "time": 4.625,
+            "seconds": 3.375
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(6) > ul:nth-of-type(1) > li:nth-of-type(2)",
+            "text": "Cloud Run Runner",
+            "fontPx": 11.81,
+            "time": 4.625,
+            "seconds": 3.375
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(6) > ul:nth-of-type(1) > li:nth-of-type(3)",
+            "text": "Health Monitor",
+            "fontPx": 11.81,
+            "time": 4.625,
+            "seconds": 3.375
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(1)",
+            "text": "Pytest Generator",
+            "fontPx": 11.83,
+            "time": 4.375,
+            "seconds": 3.625
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(2)",
+            "text": "Traceback Parser",
+            "fontPx": 11.83,
+            "time": 4.375,
+            "seconds": 3.625
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(3)",
+            "text": "Self-Repair Engine",
+            "fontPx": 11.83,
+            "time": 4.375,
+            "seconds": 3.625
+          },
+          {
+            "selector": "#s3-left > div:nth-of-type(1) > div:nth-of-type(2)",
+            "text": "NVIDIA NIM + DeepSeek",
+            "fontPx": 11.86,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "#s3-right > div:nth-of-type(1) > div:nth-of-type(2)",
+            "text": "Tool-Layer Gate",
+            "fontPx": 11.86,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(1)",
+            "text": "Software Architect",
+            "fontPx": 11.88,
+            "time": 4.25,
+            "seconds": 3.75
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)",
+            "text": "Product Specifier",
+            "fontPx": 11.88,
+            "time": 4.25,
+            "seconds": 3.75
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(3)",
+            "text": "Dependency Scout",
+            "fontPx": 11.88,
+            "time": 4.25,
+            "seconds": 3.75
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(4) > ul:nth-of-type(1) > li:nth-of-type(1)",
+            "text": "AST Import Auditor",
+            "fontPx": 11.92,
+            "time": 4.5,
+            "seconds": 3.5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(4) > ul:nth-of-type(1) > li:nth-of-type(2)",
+            "text": "Secrets Redactor",
+            "fontPx": 11.92,
+            "time": 4.5,
+            "seconds": 3.5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(4) > ul:nth-of-type(1) > li:nth-of-type(3)",
+            "text": "Injection Shield",
+            "fontPx": 11.92,
+            "time": 4.5,
+            "seconds": 3.5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(1)",
+            "text": "Frontend Architect",
+            "fontPx": 11.95,
+            "time": 4.375,
+            "seconds": 3.625
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(2)",
+            "text": "Backend Engineer",
+            "fontPx": 11.95,
+            "time": 4.375,
+            "seconds": 3.625
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(3)",
+            "text": "Database Designer",
+            "fontPx": 11.95,
+            "time": 4.375,
+            "seconds": 3.625
+          },
+          {
+            "selector": "div.alert-pill",
+            "text": "BLOCKED",
+            "fontPx": 12.43,
+            "time": 9.875,
+            "seconds": 3.625
+          },
+          {
+            "selector": "div.role",
+            "text": "Executive Tier",
+            "fontPx": 12.51,
+            "time": 3.875,
+            "seconds": 4.125
+          },
+          {
+            "selector": "div.metric-sub > span:nth-of-type(1)",
+            "text": "Sub-15s Target Achieved",
+            "fontPx": 12.85,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "span.term-title",
+            "text": "terminal — autonomous_qa_engine.py",
+            "fontPx": 13,
+            "time": 13.75,
+            "seconds": 2.125
+          },
+          {
+            "selector": "div.alert-text",
+            "text": "AST audit verified against PyPI registry; agent penalty assigned.",
+            "fontPx": 13.39,
+            "time": 9.875,
+            "seconds": 3.625
+          },
+          {
+            "selector": "div.alert-text > strong:nth-of-type(1)",
+            "text": "Hallucinated import intercepted before execution.",
+            "fontPx": 13.39,
+            "time": 9.875,
+            "seconds": 3.625
+          },
+          {
+            "selector": "div.duty",
+            "text": "Decomposes specifications · Resolves trade-offs · Enforces merge gates",
+            "fontPx": 13.48,
+            "time": 3.875,
+            "seconds": 4.125
+          },
+          {
+            "selector": "#s1-pill",
+            "text": "NexusSwarm OS // v2.0",
+            "fontPx": 13.72,
+            "time": 0.375,
+            "seconds": 3.125
+          },
+          {
+            "selector": "#s3-header > div:nth-of-type(1)",
+            "text": "RUNTIME ENGINES",
+            "fontPx": 13.83,
+            "time": 8.125,
+            "seconds": 5.375
+          },
+          {
+            "selector": "#s2-header > div:nth-of-type(1)",
+            "text": "ORGANIZATIONAL ARCHITECTURE",
+            "fontPx": 14,
+            "time": 3.75,
+            "seconds": 4.25
+          },
+          {
+            "selector": "div.benchmark-rows > div:nth-of-type(1) > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "Monolithic Cloud LLM",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "#slow-num",
+            "text": "45.2s",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.benchmark-rows > div:nth-of-type(2) > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "NexusSwarm Intelligent Router",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "#fast-num",
+            "text": "17.1s",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.code-comment",
+            "text": "# Inspecting generated dependencies in AST...",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.code-terminal > div:nth-of-type(2)",
+            "text": "fastapi FastAPI, Depends",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.code-terminal > div:nth-of-type(2) > span:nth-of-type(1)",
+            "text": "from",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.code-terminal > div:nth-of-type(2) > span:nth-of-type(2)",
+            "text": "import",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.code-terminal > div:nth-of-type(3) > span:nth-of-type(1)",
+            "text": "import",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "span.code-bad",
+            "text": "superauth_enterprise_pro",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "span.code-comment",
+            "text": "# <-- fake pkg",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.code-terminal > div:nth-of-type(4)",
+            "text": "pydantic BaseModel",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.code-terminal > div:nth-of-type(4) > span:nth-of-type(1)",
+            "text": "from",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.code-terminal > div:nth-of-type(4) > span:nth-of-type(2)",
+            "text": "import",
+            "fontPx": 14.82,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.metric-sub",
+            "text": "LATENCY REDUCTION",
+            "fontPx": 15.81,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "#s2-footer",
+            "text": "· 6 Resizable Pipelines · Deterministic Coordination Graph",
+            "fontPx": 16,
+            "time": 5,
+            "seconds": 3
+          },
+          {
+            "selector": "#s2-footer > strong:nth-of-type(1)",
+            "text": "28 Specialized Agents",
+            "fontPx": 16,
+            "time": 5,
+            "seconds": 3
+          },
+          {
+            "selector": "#s4-log-1",
+            "text": "FAIL tests/test_token_budget.py: AssertionError (Expected 45 tokens, got 50)",
+            "fontPx": 16,
+            "time": 13.75,
+            "seconds": 2.125
+          },
+          {
+            "selector": "#s4-log-2",
+            "text": "[QA Engine] Traceback analyzed. Auto-generating AST patch (Retry 1/3)...",
+            "fontPx": 16,
+            "time": 14.375,
+            "seconds": 1.5
+          },
+          {
+            "selector": "#s4-log-3",
+            "text": "✔ Patch applied · 4 passed, 0 failed in 0.42s (100% Green Test Suite)",
+            "fontPx": 16,
+            "time": 14.875,
+            "seconds": 1
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(5) > div:nth-of-type(2)",
+            "text": "Reliability",
+            "fontPx": 17.63,
+            "time": 4.5,
+            "seconds": 3.5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(6) > div:nth-of-type(2)",
+            "text": "DevOps Division",
+            "fontPx": 17.72,
+            "time": 4.625,
+            "seconds": 3.375
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(3) > div:nth-of-type(2)",
+            "text": "QA Division",
+            "fontPx": 17.74,
+            "time": 4.375,
+            "seconds": 3.625
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(1) > div:nth-of-type(2)",
+            "text": "Planning Division",
+            "fontPx": 17.82,
+            "time": 4.25,
+            "seconds": 3.75
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(4) > div:nth-of-type(2)",
+            "text": "Security Division",
+            "fontPx": 17.88,
+            "time": 4.5,
+            "seconds": 3.5
+          },
+          {
+            "selector": "#s2-divisions > div:nth-of-type(2) > div:nth-of-type(2)",
+            "text": "Engineering",
+            "fontPx": 17.93,
+            "time": 4.375,
+            "seconds": 3.625
+          },
+          {
+            "selector": "div.outro-url",
+            "text": "github.com/theshauryas1/nexus-swarm",
+            "fontPx": 19.6,
+            "time": 16,
+            "seconds": 2
+          },
+          {
+            "selector": "#s1-sub > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "28 SPECIALISTS",
+            "fontPx": 19.76,
+            "time": 1,
+            "seconds": 2.5
+          },
+          {
+            "selector": "#s1-sub > div:nth-of-type(2) > span:nth-of-type(1)",
+            "text": "6 DIVISIONS",
+            "fontPx": 19.76,
+            "time": 1,
+            "seconds": 2.5
+          },
+          {
+            "selector": "#s1-sub > div:nth-of-type(3) > span:nth-of-type(1)",
+            "text": "TOOL-LAYER GOVERNANCE",
+            "fontPx": 19.76,
+            "time": 1,
+            "seconds": 2.5
+          },
+          {
+            "selector": "#s3-header > p:nth-of-type(1)",
+            "text": "High-speed inference paired with pre-execution safety filters",
+            "fontPx": 19.76,
+            "time": 8.125,
+            "seconds": 5.375
+          },
+          {
+            "selector": "#s2-header > p:nth-of-type(1)",
+            "text": "Executive oversight → Division Managers → Autonomous Specialists",
+            "fontPx": 20,
+            "time": 3.75,
+            "seconds": 4.25
+          },
+          {
+            "selector": "div.name",
+            "text": "Head Orchestrator",
+            "fontPx": 23.1,
+            "time": 3.875,
+            "seconds": 4.125
+          },
+          {
+            "selector": "#s3-left > div:nth-of-type(1) > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "⚡ Dynamic Model Router",
+            "fontPx": 23.71,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "#s3-right > div:nth-of-type(1) > div:nth-of-type(1) > span:nth-of-type(1)",
+            "text": "🛡️ AST Hallucination Defense",
+            "fontPx": 23.71,
+            "time": 8.5,
+            "seconds": 5
+          },
+          {
+            "selector": "div.outro-tagline",
+            "text": "Governance Enforced at the Tool Layer.",
+            "fontPx": 25.49,
+            "time": 16,
+            "seconds": 2
+          }
+        ]
+      }
+    ],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 144
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

@@ -49,3 +49,6 @@ backend/workspace/*
 *.log
 logs/
 
+# ─── Brag Video Render Frames ────────────────────────────────────
+**/work/frames/
+

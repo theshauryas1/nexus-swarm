@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --ground: #030303;
+        --border-emerald: rgba(115, 255, 185, 0.4);
+        --border-subtle: rgba(229, 231, 235, 0.15);
+        --ink: #ffffff;
+        --ink-muted: #e2e8f0;
+        --emerald: #73ffb9;
+        --indigo: #818cf8;
+        --font-sans: 'Inter', -apple-system, sans-serif;
+        --font-mono: 'JetBrains Mono', monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--ground);
+        font-family: var(--font-sans);
+        color: var(--ink);
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: radial-gradient(circle at 50% 40%, #0d1527 0%, #030303 85%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 60px 80px;
+      }
+      .grid-overlay {
+        position: absolute;
+        inset: 0;
+        background-size: 60px 60px;
+        background-image: 
+          linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        pointer-events: none;
+      }
+      .scene-header {
+        text-align: center;
+        margin-bottom: 30px;
+        z-index: 2;
+      }
+      .tag-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 18px;
+        border-radius: 9999px;
+        background: rgba(115, 255, 185, 0.1);
+        border: 1px solid var(--border-emerald);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--emerald);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--emerald);
+        box-shadow: 0 0 10px var(--emerald);
+      }
+      .scene-title {
+        font-size: 46px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+        margin-bottom: 6px;
+      }
+      .scene-desc {
+        font-size: 20px;
+        color: var(--ink-muted);
+      }
+      .exec-card {
+        background: linear-gradient(180deg, #162035 0%, #0e1524 100%);
+        border: 1px solid rgba(129, 140, 248, 0.45);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(129, 140, 248, 0.15);
+        padding: 16px 36px;
+        border-radius: 14px;
+        text-align: center;
+        min-width: 540px;
+        margin-bottom: 24px;
+        z-index: 2;
+      }
+      .exec-card .role {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: var(--indigo);
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .exec-card .name {
+        font-size: 24px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 4px;
+      }
+      .exec-card .duty {
+        font-size: 15px;
+        color: var(--ink-muted);
+      }
+      .divisions-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 16px;
+        width: 100%;
+        max-width: 1720px;
+        margin-bottom: 28px;
+        z-index: 2;
+      }
+      .division-card {
+        background: #0d1322;
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        padding: 18px 14px;
+        text-align: left;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        position: relative;
+        overflow: hidden;
+      }
+      .division-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: var(--border-emerald);
+      }
+      .div-num {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--emerald);
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      .div-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 12px;
+      }
+      .div-workers {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .div-workers li {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: #cbd5e1;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .div-workers li::before {
+        content: '▪';
+        color: var(--indigo);
+        font-size: 10px;
+      }
+      .hierarchy-footer {
+        font-family: var(--font-mono);
+        font-size: 17px;
+        color: #e2e8f0;
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid var(--border-subtle);
+        padding: 12px 32px;
+        border-radius: 10px;
+        letter-spacing: 0.05em;
+        z-index: 2;
+      }
+      .hierarchy-footer strong {
+        color: var(--emerald);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="scene2" data-start="0" data-duration="4.3" data-width="1920" data-height="1080">
+      <div class="grid-overlay"></div>
+
+      <div class="scene-header" id="s2-header" data-hold="true">
+        <div class="tag-pill" data-layout-ignore="true">
+          <span class="status-dot"></span>
+          ORGANIZATIONAL ARCHITECTURE
+        </div>
+        <h2 class="scene-title">Enterprise Hierarchical Swarm</h2>
+        <p class="scene-desc" data-layout-ignore="true">Executive governance → 6 Division Managers → 21 Specialists</p>
+      </div>
+
+      <div class="exec-card" id="s2-exec" data-layout-ignore="true" data-hold="true">
+        <div class="role">Executive Tier</div>
+        <div class="name">Head Orchestrator</div>
+        <div class="duty">Decomposes specifications · Resolves trade-offs · Enforces merge gates</div>
+      </div>
+
+      <div class="divisions-grid" id="s2-divisions" data-layout-ignore="true">
+        <div class="division-card">
+          <div class="div-num">01. PLANNING</div>
+          <div class="div-title">Planning</div>
+          <ul class="div-workers">
+            <li>Software Architect</li>
+            <li>Product Specifier</li>
+            <li>Scout Agent</li>
+          </ul>
+        </div>
+        <div class="division-card">
+          <div class="div-num">02. CODE</div>
+          <div class="div-title">Engineering</div>
+          <ul class="div-workers">
+            <li>Frontend Architect</li>
+            <li>Backend Engineer</li>
+            <li>Database Lead</li>
+          </ul>
+        </div>
+        <div class="division-card">
+          <div class="div-num">03. QUALITY</div>
+          <div class="div-title">QA Division</div>
+          <ul class="div-workers">
+            <li>Pytest Generator</li>
+            <li>Traceback Parser</li>
+            <li>Self-Repair Engine</li>
+          </ul>
+        </div>
+        <div class="division-card">
+          <div class="div-num">04. SECURITY</div>
+          <div class="div-title">Security</div>
+          <ul class="div-workers">
+            <li>AST Import Auditor</li>
+            <li>Secrets Redactor</li>
+            <li>Injection Shield</li>
+          </ul>
+        </div>
+        <div class="division-card">
+          <div class="div-num">05. RESILIENCE</div>
+          <div class="div-title">Reliability</div>
+          <ul class="div-workers">
+            <li>Canary Verifier</li>
+            <li>Circuit Breaker</li>
+            <li>Memory Engine</li>
+          </ul>
+        </div>
+        <div class="division-card">
+          <div class="div-num">06. DEVOPS</div>
+          <div class="div-title">DevOps</div>
+          <ul class="div-workers">
+            <li>Docker Builder</li>
+            <li>Cloud Run Runner</li>
+            <li>Health Monitor</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="hierarchy-footer" id="s2-footer" data-layout-ignore="true">
+        <strong>28 Specialized Agents</strong> · 6 Resizable Pipelines · Deterministic Coordination Graph
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["scene2"] = tl;
+
+      tl.from("#s2-header", { opacity: 0, y: -20, duration: 0.35, ease: "power3.out" }, 0.05);
+      tl.from("#s2-exec", { opacity: 0, scale: 0.94, duration: 0.35, ease: "back.out(1.4)" }, 0.2);
+      tl.from(".division-card", { opacity: 0, y: 25, duration: 0.35, stagger: 0.06, ease: "power3.out" }, 0.35);
+      tl.from("#s2-footer", { opacity: 0, y: 15, duration: 0.35, ease: "power2.out" }, 0.7);
+
+      // Subtle breath on the executive card at 2.2s
+      tl.to("#s2-exec", { scale: 1.02, duration: 1.4, ease: "sine.inOut" }, 2.2);
+
+      // Settle and hold until 4.0s
+      tl.to("#root", { opacity: 0, x: -30, duration: 0.3, ease: "power2.in" }, 4.0);
+
+      tl.seek(0);
+    </script>
+  </body>
+</html>

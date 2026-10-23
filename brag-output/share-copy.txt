@@ -1,0 +1,3 @@
+Introducing NexusSwarm: an autonomous 28-agent engineering operating system organized into corporate divisions (Executive → 6 Managers → 21 Workers). Dynamic NIM routing cuts latency by 62% (45s → 17s), paired with AST-level import hallucination defense and self-repairing QA loops.
+
+Source available: https://github.com/theshauryas1/nexus-swarm
