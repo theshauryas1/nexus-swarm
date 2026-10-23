@@ -1,3 +1,13 @@
-Introducing NexusSwarm: an autonomous 28-agent engineering operating system organized into corporate divisions (Executive → 6 Managers → 21 Workers). Dynamic NIM routing cuts latency by 62% (45s → 17s), paired with AST-level import hallucination defense and self-repairing QA loops.
+Introducing NexusSwarm v2: an enterprise hierarchical multi-agent engineering operating system.
 
-Source available: https://github.com/theshauryas1/nexus-swarm
+Instead of flat, fragile prompt loops, NexusSwarm organizes 28 specialized AI agents into 3 governance tiers: Executive (HeadOrchestrator) → 5 Managers (Planning, Engineering, QA, Security, DevOps) → Sandboxed Workers.
+
+Key highlights:
+• Dynamic Model Router: Right-sizes agent tasks across NVIDIA NIM (Nemotron-3 Super 120B, Llama 3.2 11B Vision, Nemotron-3 Nano/Lightning) and Google Gemini cloud failover, cutting task latency by 62% (45s → 17s).
+• 5-Tier Memory Pyramid: PostgreSQL 15 ACID storage paired with pgvector 1024-dimension embeddings (llama-nemotron-embed-vl-1b) for long-term semantic pattern recall, plus Redis 7 Pub/Sub.
+• Defensive Tooling: AST-validated package imports block hallucinated dependencies before execution; SecurityManager holds strict hard-veto power over DevOps deployments.
+• Autonomous QA Self-Repair: Automatically triages pytest tracebacks and patches bugs in an automated 3-retry loop.
+• Empirical Benchmarks: 107-task suite across 9 domains with 4 live attack vectors blocked.
+
+Live on Google Cloud Run & source-available on GitHub:
+https://github.com/theshauryas1/nexus-swarm
