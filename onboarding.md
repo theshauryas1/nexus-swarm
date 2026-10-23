@@ -15,7 +15,7 @@ Welcome to the **NexusSwarm v2** workspace! This guide walks you through setting
 ### 1.2. Backend Installation
 1. Navigate to the project directory:
    ```bash
-   cd nexusswarm
+   cd nexus-swarm
    ```
 2. Create and activate a Python virtual environment:
    ```bash

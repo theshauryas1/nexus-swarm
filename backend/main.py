@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from config import get_settings
@@ -176,6 +177,8 @@ app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=trusted_hosts,
 )
+
+app.add_middleware(SlowAPIMiddleware)
 
 # ─── Routes ───────────────────────────────────────────────────────
 app.include_router(router)

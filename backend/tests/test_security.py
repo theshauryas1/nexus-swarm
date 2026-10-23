@@ -138,3 +138,22 @@ def test_no_public_upload_routes():
         if "upload" in getattr(route, "path", "").lower()
     ]
     assert upload_routes == []
+
+def test_token_budget_enforcement():
+    from security_utils import check_token_budget, record_token_usage
+    test_ip = "198.51.100.88"
+    assert check_token_budget(test_ip, 10_000) is True
+    record_token_usage(test_ip, 50_000)
+    assert check_token_budget(test_ip, 10_000) is False
+
+    # Verify endpoint returns 429 with Retry-After when budget exceeded
+    budget_ip = "203.0.113.200"
+    record_token_usage(budget_ip, 50_000)
+    resp = client.post(
+        "/submit-task",
+        json={"title": "Budget Test", "description": "Testing token budget enforcement"},
+        headers={"X-Forwarded-For": budget_ip},
+    )
+    assert resp.status_code == 429
+    assert "Token budget exceeded" in resp.json()["detail"]
+    assert "Retry-After" in resp.headers

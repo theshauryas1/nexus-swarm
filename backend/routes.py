@@ -19,7 +19,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Request, Query
 from pydantic import BaseModel, Field, field_validator
 from limiter import limiter
-from security_utils import check_token_budget
+from security_utils import check_token_budget, record_token_usage
 from agents.agent_security_prompt import get_secure_system_prompt
 
 from agents.llm_factory import (
@@ -404,7 +404,7 @@ async def agent_event(
 @limiter.limit("60/minute")
 async def get_agents(request: Request):
     """
-    Returns all 28 agents with live model assignments from llm_factory.
+    Returns all 31 registered agents with live model assignments from llm_factory.
     Frontend AgentGraph.tsx + OutputPanel.tsx consume this.
     """
     registry = get_full_model_registry()
@@ -456,7 +456,8 @@ async def submit_task(request: Request, task_req: TaskRequest):
         )
 
     # ── Security: check per-IP token budget before accepting work (cost-attack prevention)
-    client_ip = request.client.host if request.client else "unknown"
+    forwarded = request.headers.get("x-forwarded-for") or request.headers.get("X-Forwarded-For")
+    client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
     # Each pipeline run will consume roughly 8000–10000 tokens; guard with a 10k estimate
     if not check_token_budget(client_ip, 10_000):
         from fastapi import HTTPException
@@ -465,6 +466,7 @@ async def submit_task(request: Request, task_req: TaskRequest):
             detail="Token budget exceeded. Please wait before submitting more tasks.",
             headers={"Retry-After": "900"},
         )
+    record_token_usage(client_ip, 10_000)
 
     task_id = None
     clean_title = html.escape(task_req.title)
