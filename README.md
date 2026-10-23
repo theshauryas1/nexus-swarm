@@ -115,4 +115,4 @@ gcloud builds submit --config=deploy/cloudbuild-frontend.yaml
 
 ## 📄 License & Evaluation
 
-Source-available for review; contact me for reuse permission. See [LICENSE](LICENSE) for details.
+This project is source-available for review and evaluation only. All rights reserved. If you'd like to reuse any part of it, please contact me first at [theshauryash@gmail.com](mailto:theshauryash@gmail.com). See [LICENSE](LICENSE) for full terms.
